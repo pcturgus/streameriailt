@@ -110,7 +110,7 @@ export default function Page() {
     300_000
   );
   const clipsApi = useApi<{ clips: Clip[] }>("/api/clips", 300_000);
-  const me = useApi<{ user: { id: string; displayName: string; avatarUrl: string | null } | null }>("/api/auth/me", 300_000);
+  const me = useApi<{ user: { id: string; displayName: string; avatarUrl: string | null; isAdmin?: boolean } | null }>("/api/auth/me", 300_000);
 
   const [plat, setPlat] = useState<"all" | Platform>("all");
   const [cat, setCat] = useState("visi");
@@ -208,6 +208,7 @@ export default function Page() {
               <div className="flex items-center gap-2.5">
                 <Avatar name={me.data.user.displayName} src={me.data.user.avatarUrl} className="w-8 h-8 rounded-full text-xs" />
                 <span className="hidden sm:block text-xs font-semibold text-slate-200 max-w-[8rem] truncate">{me.data.user.displayName}</span>
+                {me.data.user.isAdmin && <a href="/admin" className="text-xs font-semibold text-indigo-300 hover:text-indigo-200 border border-indigo-500/40 rounded-md px-2 py-1">Admin</a>}
                 <button onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); window.location.reload(); }} className="text-xs text-slate-400 hover:text-white transition-colors">Atsijungti</button>
               </div>
             ) : (

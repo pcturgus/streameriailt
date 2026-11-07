@@ -26,6 +26,7 @@ model User {
   email       String?   @unique
   displayName String
   avatarUrl   String?
+  isAdmin     Boolean   @default(false)
   createdAt   DateTime  @default(now())
   channels    Channel[]
   accounts    Account[]
@@ -117,6 +118,7 @@ model Clip {
   durationSec  Int      @default(0)
   views        Int      @default(0)
   likes        Int      @default(0)
+  hidden       Boolean  @default(false)
   createdAt    DateTime @default(now())
 
   @@unique([platform, platformId])

@@ -10,7 +10,7 @@ const PER_CHANNEL = 2; // daugiausia klipų iš vieno kanalo
 export async function GET() {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const all = await prisma.clip.findMany({
-    where: { createdAt: { gte: since }, channel: { status: "APPROVED" } },
+    where: { createdAt: { gte: since }, hidden: false, channel: { status: "APPROVED" } },
     include: { channel: true },
     orderBy: { views: "desc" },
     take: 100,

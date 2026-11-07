@@ -45,5 +45,11 @@ export async function clearSession() {
 export async function currentUser() {
   const uid = readToken((await cookies()).get(NAME)?.value);
   if (!uid) return null;
-  return prisma.user.findUnique({ where: { id: uid }, select: { id: true, displayName: true, avatarUrl: true } });
+  return prisma.user.findUnique({ where: { id: uid }, select: { id: true, displayName: true, avatarUrl: true, isAdmin: true } });
+}
+
+// Grąžina vartotoją tik jei jis yra administratorius (naudojama visuose /api/admin/* maršrutuose)
+export async function requireAdmin() {
+  const u = await currentUser();
+  return u?.isAdmin ? u : null;
 }
