@@ -104,7 +104,11 @@ const NAV = [
 
 export default function Page() {
   const live = useApi<{ totals: { live: number; viewers: number }; streams: Stream[] }>("/api/streams/live");
-  const board = useApi<{ period: string | null; items: Rank[] }>("/api/leaderboard", 300_000);
+  const [boardPage, setBoardPage] = useState(1);
+  const board = useApi<{ period: string | null; items: Rank[]; total: number; page: number; pageSize: number; totalPages: number }>(
+    `/api/leaderboard?page=${boardPage}`,
+    300_000
+  );
   const clipsApi = useApi<{ clips: Clip[] }>("/api/clips", 300_000);
   const me = useApi<{ user: { id: string; displayName: string; avatarUrl: string | null } | null }>("/api/auth/me", 300_000);
 
@@ -385,6 +389,19 @@ export default function Page() {
                   })}
               </div>
             </div>
+          
+            {board.data && board.data.totalPages > 1 && (
+              <Pager
+                page={board.data.page}
+                total={board.data.totalPages}
+                count={board.data.total}
+                size={board.data.pageSize}
+                onChange={(n) => {
+                  setBoardPage(n);
+                  document.getElementById("reitingas")?.scrollIntoView({ behavior: "smooth" });
+                }}
+              />
+            )}
           </div>
         </section>
 
@@ -494,6 +511,40 @@ function Empty({ title, text }: { title: string; text: string }) {
       <div className="flex justify-center text-slate-600 mb-3"><Radio className="w-10 h-10" /></div>
       <p className="text-slate-300 font-medium text-sm">{title}</p>
       <p className="text-slate-500 text-xs mt-1">{text}</p>
+    </div>
+  );
+}
+
+function Pager({ page, total, count, size, onChange }: { page: number; total: number; count: number; size: number; onChange: (n: number) => void }) {
+  const nums: (number | "…")[] = [];
+  for (let i = 1; i <= total; i++) {
+    if (i === 1 || i === total || Math.abs(i - page) <= 1) nums.push(i);
+    else if (nums[nums.length - 1] !== "…") nums.push("…");
+  }
+  const from = (page - 1) * size + 1;
+  const to = Math.min(page * size, count);
+  const nav = "px-3 py-1.5 rounded-md text-xs font-semibold border border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+      <p className="text-xs text-slate-500">Rodoma {from}–{to} iš {count}</p>
+      <div className="flex items-center gap-1">
+        <button disabled={page <= 1} onClick={() => onChange(page - 1)} className={nav}>‹ Atgal</button>
+        {nums.map((n, i) =>
+          n === "…" ? (
+            <span key={`e${i}`} className="px-2 text-xs text-slate-600">…</span>
+          ) : (
+            <button
+              key={n}
+              onClick={() => onChange(n)}
+              aria-current={n === page ? "page" : undefined}
+              className={`min-w-8 px-2.5 py-1.5 rounded-md text-xs font-semibold border transition-colors ${n === page ? "bg-indigo-600 border-indigo-500 text-white" : "border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:border-slate-700"}`}
+            >
+              {n}
+            </button>
+          )
+        )}
+        <button disabled={page >= total} onClick={() => onChange(page + 1)} className={nav}>Toliau ›</button>
+      </div>
     </div>
   );
 }
