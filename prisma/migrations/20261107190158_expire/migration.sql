@@ -1,0 +1,5 @@
+-- AlterEnum
+ALTER TYPE "ChannelStatus" ADD VALUE 'EXPIRED';
+
+-- AlterTable
+ALTER TABLE "Channel" ADD COLUMN     "activatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
