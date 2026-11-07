@@ -1,0 +1,52 @@
+{
+  "name": "streameriai-lt",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "db:up": "docker compose up -d",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio",
+    "sync:twitch": "tsx scripts/sync-twitch.ts",
+    "sync:twitch:loop": "tsx scripts/sync-twitch.ts --loop",
+    "add:youtube": "tsx scripts/add-youtube.ts",
+    "sync:youtube": "tsx scripts/sync-youtube.ts",
+    "sync:youtube:loop": "tsx scripts/sync-youtube.ts --loop",
+    "add:kick": "tsx scripts/add-kick.ts",
+    "sync:kick": "tsx scripts/sync-kick.ts",
+    "sync:kick:loop": "tsx scripts/sync-kick.ts --loop",
+    "rank": "tsx scripts/compute-ranking.ts",
+    "rank:loop": "tsx scripts/compute-ranking.ts --loop",
+    "sync:clips": "tsx scripts/sync-clips.ts",
+    "sync:clips:loop": "tsx scripts/sync-clips.ts --loop",
+    "add:twitch": "tsx scripts/add-twitch.ts",
+    "approve": "tsx scripts/approve.ts",
+    "expire": "tsx scripts/expire-channels.ts",
+    "expire:loop": "tsx scripts/expire-channels.ts --loop",
+    "remove": "tsx scripts/remove-channel.ts",
+    "postinstall": "prisma generate"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.0.0",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.23.8",
+    "lucide-react": "^0.469.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "prisma": "^6.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/postcss": "^4.0.0",
+    "postcss": "^8.4.49"
+  }
+}

@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Platform {
+  TWITCH
+  KICK
+  YOUTUBE
+}
+
+enum ChannelStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+// Prisijungusio vartotojo paskyra (OAuth bus pridėtas 3 žingsnyje)
+model User {
+  id          String    @id @default(cuid())
+  email       String?   @unique
+  displayName String
+  avatarUrl   String?
+  createdAt   DateTime  @default(now())
+  channels    Channel[]
+  accounts    Account[]
+}
+
+// Kanalas konkrečioje platformoje
+model Channel {
+  id          String        @id @default(cuid())
+  platform    Platform
+  platformId  String // kanalo ID platformos sistemoje
+  login       String // URL vardas, pvz. gameris_lt
+  displayName String
+  avatarUrl   String?
+  url         String
+  verified    Boolean       @default(false)
+  language    String        @default("lt")
+  status      ChannelStatus @default(PENDING)
+  followers   Int           @default(0)
+  activatedAt DateTime      @default(now())
+  ownerId     String?
+  owner       User?         @relation(fields: [ownerId], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  live     LiveStream?
+  stats    ChannelStat[]
+  rankings Ranking[]
+  clips    Clip[]
+
+  @@unique([platform, platformId])
+  @@index([status, platform])
+}
+
+// Dabartinė kanalo transliacijos būsena (viena eilutė kanalui, atnaujinama workerio)
+model LiveStream {
+  id           String    @id @default(cuid())
+  channelId    String    @unique
+  channel      Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  isLive       Boolean   @default(false)
+  title        String
+  game         String // rodomas pavadinimas, pvz. Counter-Strike 2
+  category     String // filtro raktas: gaming | esports | irl | tech
+  viewers      Int       @default(0)
+  thumbnailUrl String?
+  tags         String[]
+  startedAt    DateTime?
+  updatedAt    DateTime  @updatedAt
+
+  @@index([isLive, viewers])
+}
+
+// Dienos statistikos momentinė nuotrauka (augimui ir reitingui skaičiuoti)
+model ChannelStat {
+  id            String   @id @default(cuid())
+  channelId     String
+  channel       Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  date          DateTime @db.Date
+  followers     Int
+  avgViewers    Int      @default(0)
+  peakViewers   Int      @default(0)
+  hoursStreamed Float    @default(0)
+
+  @@unique([channelId, date])
+}
+
+// Mėnesio reitingas (skaičiuojamas 4 žingsnyje)
+model Ranking {
+  id        String  @id @default(cuid())
+  channelId String
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  period    String // pvz. "2026-11"
+  rank      Int
+  score     Float
+  growthPct Float   @default(0)
+
+  @@unique([channelId, period])
+  @@index([period, rank])
+}
+
+model Clip {
+  id           String   @id @default(cuid())
+  platform     Platform
+  platformId   String
+  channelId    String
+  channel      Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  title        String
+  thumbnailUrl String?
+  embedUrl     String?
+  durationSec  Int      @default(0)
+  views        Int      @default(0)
+  likes        Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@unique([platform, platformId])
+  @@index([createdAt, views])
+}
+
+// Paraiškos iš "Prijungti kanalą" formos
+model ChannelSubmission {
+  id          String        @id @default(cuid())
+  channelName String
+  platform    Platform
+  url         String
+  email       String?
+  status      ChannelStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+
+  @@index([status, createdAt])
+}
+
+// Prisijungimo per išorinę platformą (OAuth) paskyra
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String // twitch | kick | google
+  providerAccountId String
+  createdAt         DateTime @default(now())
+
+  @@unique([provider, providerAccountId])
+}
