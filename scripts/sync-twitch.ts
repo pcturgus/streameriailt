@@ -92,6 +92,18 @@ function categoryOf(game: string): string {
   return "gaming";
 }
 
+// Transliacijos valandų skaičiavimas: pridedame laiką nuo praėjusio patikrinimo, jei kanalas jau buvo gyvas.
+// Jei tarpas per ilgas (workeris praleido paleidimus) arba tai pirmas pastebėjimas, skiriame nedidelį kreditą.
+const GAP_CAP_MS = 20 * 60_000;
+const FIRST_SEEN_CREDIT_H = 5 / 60;
+function hoursSince(prev: { isLive: boolean; updatedAt: Date } | null, nowMs: number): number {
+  if (prev?.isLive) {
+    const d = nowMs - prev.updatedAt.getTime();
+    if (d >= 0 && d <= GAP_CAP_MS) return d / 3_600_000;
+  }
+  return FIRST_SEEN_CREDIT_H;
+}
+
 async function sync() {
   const started = Date.now();
   const streams = await fetchLtStreams();
@@ -134,6 +146,8 @@ async function sync() {
       tags: (s.tags ?? []).slice(0, 3),
       startedAt: new Date(s.started_at),
     };
+    const prevLive = await prisma.liveStream.findUnique({ where: { channelId: ch.id }, select: { isLive: true, updatedAt: true } });
+    const addHours = hoursSince(prevLive, Date.now());
     await prisma.liveStream.upsert({
       where: { channelId: ch.id },
       update: data,
@@ -146,11 +160,12 @@ async function sync() {
       where: key,
       update: {
         peakViewers: Math.max(prev?.peakViewers ?? 0, s.viewer_count),
+        hoursStreamed: { increment: addHours },
         avgViewers: Math.round((prev?.avgViewers ?? s.viewer_count) * 0.9 + s.viewer_count * 0.1),
       },
       create: {
         channelId: ch.id, date: today, followers: ch.followers,
-        avgViewers: s.viewer_count, peakViewers: s.viewer_count,
+        avgViewers: s.viewer_count, peakViewers: s.viewer_count, hoursStreamed: addHours,
       },
     });
   }

@@ -13,6 +13,18 @@ function categoryOf(game: string): string {
 // Kick atsakymo laukų pavadinimus skaitome atsargiai (keli galimi variantai)
 const g = (o: any, ...keys: string[]) => keys.map((k) => o?.[k]).find((v) => v !== undefined && v !== null);
 
+// Transliacijos valandų skaičiavimas: pridedame laiką nuo praėjusio patikrinimo, jei kanalas jau buvo gyvas.
+// Jei tarpas per ilgas (workeris praleido paleidimus) arba tai pirmas pastebėjimas, skiriame nedidelį kreditą.
+const GAP_CAP_MS = 20 * 60_000;
+const FIRST_SEEN_CREDIT_H = 5 / 60;
+function hoursSince(prev: { isLive: boolean; updatedAt: Date } | null, nowMs: number): number {
+  if (prev?.isLive) {
+    const d = nowMs - prev.updatedAt.getTime();
+    if (d >= 0 && d <= GAP_CAP_MS) return d / 3_600_000;
+  }
+  return FIRST_SEEN_CREDIT_H;
+}
+
 async function sync() {
   const t0 = Date.now();
   const found = new Map<string, any>();
@@ -84,6 +96,8 @@ async function sync() {
       tags: Array.isArray(tagsRaw) ? tagsRaw.slice(0, 3).map(String) : [],
       startedAt: g(s, "started_at", "start_time") ? new Date(g(s, "started_at", "start_time")) : null,
     };
+    const prevLive = await prisma.liveStream.findUnique({ where: { channelId: ch.id }, select: { isLive: true, updatedAt: true } });
+    const addHours = hoursSince(prevLive, Date.now());
     await prisma.liveStream.upsert({ where: { channelId: ch.id }, update: data, create: { channelId: ch.id, ...data } });
 
     const key = { channelId_date: { channelId: ch.id, date: today } };
@@ -92,9 +106,10 @@ async function sync() {
       where: key,
       update: {
         peakViewers: Math.max(prev?.peakViewers ?? 0, viewers),
+        hoursStreamed: { increment: addHours },
         avgViewers: Math.round((prev?.avgViewers ?? viewers) * 0.9 + viewers * 0.1),
       },
-      create: { channelId: ch.id, date: today, followers: ch.followers, avgViewers: viewers, peakViewers: viewers },
+      create: { channelId: ch.id, date: today, followers: ch.followers, avgViewers: viewers, peakViewers: viewers, hoursStreamed: addHours },
     });
   }
 

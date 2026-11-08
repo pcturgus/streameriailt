@@ -15,7 +15,7 @@ type Stream = {
   id: string; title: string; game: string; category: string; viewers: number;
   thumbnailUrl: string | null; tags: string[]; channel: Channel;
 };
-type Rank = { id: string; rank: number; score: number; growthPct: number; channel: Channel };
+type Rank = { id: string; rank: number; score: number; growthPct: number; avgViewers: number; hours: number; channel: Channel };
 type Clip = {
   id: string; title: string; views: number; likes: number; durationSec: number;
   thumbnailUrl: string | null; embedUrl: string | null; channel: Channel;
@@ -359,13 +359,13 @@ export default function Page() {
               <div>
                 <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-md mb-2"><Trophy className="w-3.5 h-3.5" />Oficialus Reitingas</div>
                 <h2 className="text-2xl font-bold text-white tracking-tight">TOP Streameriai Lietuvoje</h2>
-                <p className="text-xs text-slate-400 mt-1">Sąrašas atnaujinamas kas 24 valandas pagal žiūrovų engagement indeksą</p>
+                <p className="text-xs text-slate-400 mt-1">Pastarųjų 30 dienų reitingas pagal vidutinį žiūrovų skaičių ir transliacijų nuoseklumą. Atnaujinamas kas valandą.</p>
               </div>
               <div className="text-xs text-slate-500 font-medium">Duomenys sinchronizuojami per oficialias API sąsajas</div>
             </div>
             <div className="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
               <div className="hidden sm:grid grid-cols-12 gap-4 px-6 py-3.5 border-b border-slate-800 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                <div className="col-span-1">Vieta</div><div className="col-span-3">Kūrėjas</div><div className="col-span-2 text-right">Sekėjai</div><div className="col-span-2 text-right">Vid. Žiūrovai</div><div className="col-span-2 text-right">Augimas</div><div className="col-span-2 text-right">Mėn. Taškai</div>
+                <div className="col-span-1">Vieta</div><div className="col-span-3">Kūrėjas</div><div className="col-span-2 text-right">Sekėjai</div><div className="col-span-2 text-right">Vid. Žiūrovai</div><div className="col-span-2 text-right">Augimas</div><div className="col-span-2 text-right">Taškai</div>
               </div>
               <div className="divide-y divide-slate-800/80">
                 {!board.data ? <div className="p-8 text-center text-xs text-slate-500">{board.err ? "Nepavyko gauti reitingo" : "Kraunama..."}</div>
@@ -382,9 +382,9 @@ export default function Page() {
                           <div><div className="flex items-center gap-2"><span className="font-semibold text-white text-sm">{t.channel.displayName}</span><span className={PLAT[p].text}><Brand p={p} className="w-3.5 h-3.5" /></span></div><span className="text-xs text-slate-500">{PLAT[p].label}</span></div>
                         </div>
                         <div className={`col-span-2 ${row} text-slate-300`}><span className="sm:hidden text-slate-500">Sekėjai:</span><b className="font-semibold">{t.channel.followers ? fmt(t.channel.followers) : "–"}</b></div>
-                        <div className={`col-span-2 ${row} text-slate-300`}><span className="sm:hidden text-slate-500">Vid. žiūrovai:</span><b className="font-semibold">{t.channel.stats?.[0]?.avgViewers ? fmt(t.channel.stats[0].avgViewers) : "–"}</b></div>
+                        <div className={`col-span-2 ${row} text-slate-300`}><span className="sm:hidden text-slate-500">Vid. žiūrovai:</span><b className="font-semibold">{t.avgViewers ? fmt(t.avgViewers) : "–"}</b></div>
                         <div className={`col-span-2 ${row} font-semibold ${t.growthPct >= 0 ? "text-emerald-400" : "text-red-400"}`}><span className="sm:hidden text-slate-500">Augimas:</span><span>{t.growthPct >= 0 ? "+" : ""}{t.growthPct.toFixed(1)}%</span></div>
-                        <div className={`col-span-2 ${row} text-indigo-300 font-semibold`}><span className="sm:hidden text-slate-500">Mėn. taškai:</span><span>{t.score.toFixed(1)}</span></div>
+                        <div className={`col-span-2 ${row} text-indigo-300 font-semibold`}><span className="sm:hidden text-slate-500">Taškai:</span><span>{t.score.toFixed(1)}</span></div>
                       </div>
                     );
                   })}

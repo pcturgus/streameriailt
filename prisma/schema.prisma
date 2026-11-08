@@ -101,6 +101,8 @@ model Ranking {
   rank      Int
   score     Float
   growthPct Float   @default(0)
+  avgViewers Int     @default(0)
+  hours      Float   @default(0)
 
   @@unique([channelId, period])
   @@index([period, rank])
