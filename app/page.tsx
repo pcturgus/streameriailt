@@ -448,10 +448,10 @@ export default function Page() {
         <section id="klipai" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2"><Film className="w-5 h-5 text-indigo-400" />Populiariausi Savaitės Klipai</h2>
-            <p className="text-xs text-slate-400 mt-1">Įsimintiniausi momentai iš Lietuvos streamų</p>
+            <p className="text-xs text-slate-400 mt-1">Įsimintiniausi momentai iš Lietuvos streamų. Kol kas rodomi Twitch klipai, Kick klipai bus pridėti vėliau.</p>
           </div>
           {!clipsApi.data ? <div className="text-xs text-slate-500">{clipsApi.err ? "Nepavyko gauti klipų" : "Kraunama..."}</div>
-            : clipsApi.data.clips.length === 0 ? <Empty title="Klipų dar nėra" text="Jie atsiras, kai bus prijungtas klipų importas." />
+            : clipsApi.data.clips.length === 0 ? <Empty title="Šiuo metu klipų nėra" text="Kol kas rodomi Twitch klipai, o Kick klipai bus pridėti vėliau, kai atsiras tokia galimybė." />
             : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {clipsApi.data.clips.map((c) => (
