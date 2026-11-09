@@ -3,3 +3,18 @@
 :root { color-scheme: dark; }
 html { scroll-behavior: smooth; scroll-padding-top: 5rem; background: #0B0F17; }
 body { background: #0B0F17; color: #f1f5f9; }
+
+/* Animuota „kylančių“ ikona: linija pati save nubrėžia ir švelniai juda aukštyn */
+@keyframes rise-draw {
+  0% { stroke-dashoffset: 32; }
+  55%, 100% { stroke-dashoffset: 0; }
+}
+@keyframes rise-float {
+  0%, 100% { transform: translateY(1px); }
+  50% { transform: translateY(-1px); }
+}
+.rise-icon { display: inline-flex; animation: rise-float 2.4s ease-in-out infinite; }
+.rise-icon path { stroke-dasharray: 32; animation: rise-draw 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .rise-icon, .rise-icon path { animation: none; }
+}

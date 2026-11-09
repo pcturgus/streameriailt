@@ -370,7 +370,14 @@ export default function Page() {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div className="flex flex-wrap bg-slate-900 p-1 rounded-lg border border-slate-800">
                 {([["all", "Visi"], ["TWITCH", "Twitch"], ["KICK", "Kick"], ["YOUTUBE", "YouTube"], ["rising", "Kylančios"]] as const).map(([k, l]) => (
-                  <button key={k} onClick={() => { setBoardTab(k); setBoardPage(1); }} className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${boardTab === k ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}>{l}</button>
+                  <button key={k} onClick={() => { setBoardTab(k); setBoardPage(1); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${boardTab === k ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}>
+                    {k === "TWITCH" || k === "KICK" || k === "YOUTUBE" ? (
+                      <span className={PLAT[k].text}><Brand p={k} className="w-3.5 h-3.5" /></span>
+                    ) : k === "rising" ? (
+                      <span className="rise-icon text-emerald-400"><TrendingUp className="w-3.5 h-3.5" /></span>
+                    ) : null}
+                    {l}
+                  </button>
                 ))}
               </div>
               {boardTab !== "rising" && (
