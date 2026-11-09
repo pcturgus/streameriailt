@@ -100,9 +100,14 @@ model Ranking {
   period    String // pvz. "2026-11"
   rank      Int
   score     Float
-  growthPct Float   @default(0)
+    growthPct  Float?
   avgViewers Int     @default(0)
   hours      Float   @default(0)
+  partAudience    Float   @default(0)
+  partConsistency Float   @default(0)
+  prevRank        Int?
+  isNew           Boolean @default(false)
+  prevAvgViewers  Int?
 
   @@unique([channelId, period])
   @@index([period, rank])
@@ -150,4 +155,15 @@ model Account {
   createdAt         DateTime @default(now())
 
   @@unique([provider, providerAccountId])
+}
+
+// Kasdienė reitingo nuotrauka (kad galėtume rodyti, kaip pasikeitė vieta per savaitę)
+model RankingHistory {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  channelId String
+  rank      Int
+
+  @@unique([date, channelId])
+  @@index([date])
 }

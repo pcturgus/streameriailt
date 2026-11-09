@@ -15,7 +15,10 @@ type Stream = {
   id: string; title: string; game: string; category: string; viewers: number;
   thumbnailUrl: string | null; tags: string[]; channel: Channel;
 };
-type Rank = { id: string; rank: number; score: number; growthPct: number; avgViewers: number; hours: number; channel: Channel };
+type Rank = {
+  id: string; rank: number; score: number; growthPct: number | null; avgViewers: number; hours: number;
+  partAudience: number; partConsistency: number; prevRank: number | null; isNew: boolean; prevAvgViewers: number | null; channel: Channel;
+};
 type Clip = {
   id: string; title: string; views: number; likes: number; durationSec: number;
   thumbnailUrl: string | null; embedUrl: string | null; channel: Channel;
@@ -105,8 +108,9 @@ const NAV = [
 export default function Page() {
   const live = useApi<{ totals: { live: number; viewers: number }; streams: Stream[] }>("/api/streams/live");
   const [boardPage, setBoardPage] = useState(1);
+  const [boardTab, setBoardTab] = useState<"all" | "TWITCH" | "KICK" | "YOUTUBE" | "rising">("all");
   const board = useApi<{ period: string | null; items: Rank[]; total: number; page: number; pageSize: number; totalPages: number }>(
-    `/api/leaderboard?page=${boardPage}`,
+    `/api/leaderboard?page=${boardPage}&tab=${boardTab === "rising" ? "rising" : "main"}&platform=${boardTab === "all" || boardTab === "rising" ? "" : boardTab}`,
     300_000
   );
   const clipsApi = useApi<{ clips: Clip[] }>("/api/clips", 300_000);
@@ -359,32 +363,59 @@ export default function Page() {
               <div>
                 <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-md mb-2"><Trophy className="w-3.5 h-3.5" />Oficialus Reitingas</div>
                 <h2 className="text-2xl font-bold text-white tracking-tight">TOP Streameriai Lietuvoje</h2>
-                <p className="text-xs text-slate-400 mt-1">Pastarųjų 30 dienų reitingas pagal vidutinį žiūrovų skaičių ir transliacijų nuoseklumą. Atnaujinamas kas valandą.</p>
+                <p className="text-xs text-slate-400 mt-1">{boardTab === "rising" ? "Kanalai, kurių vidutinis žiūrovų skaičius per pastarąsias 7 dienas labiausiai išaugo, palyginti su ankstesnėmis 7 dienomis." : "Pastarųjų 30 dienų reitingas pagal vidutinį žiūrovų skaičių ir transliacijų nuoseklumą. Atnaujinamas kas valandą."}</p>
               </div>
               <div className="text-xs text-slate-500 font-medium">Duomenys sinchronizuojami per oficialias API sąsajas</div>
             </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div className="flex flex-wrap bg-slate-900 p-1 rounded-lg border border-slate-800">
+                {([["all", "Visi"], ["TWITCH", "Twitch"], ["KICK", "Kick"], ["YOUTUBE", "YouTube"], ["rising", "Kylančios"]] as const).map(([k, l]) => (
+                  <button key={k} onClick={() => { setBoardTab(k); setBoardPage(1); }} className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${boardTab === k ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}>{l}</button>
+                ))}
+              </div>
+              {boardTab !== "rising" && (
+                <div className="flex items-center gap-3 text-[11px] text-slate-500">
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-indigo-400" />Auditorija</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-emerald-400" />Nuoseklumas</span>
+                </div>
+              )}
+            </div>
             <div className="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
               <div className="hidden sm:grid grid-cols-12 gap-4 px-6 py-3.5 border-b border-slate-800 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                <div className="col-span-1">Vieta</div><div className="col-span-3">Kūrėjas</div><div className="col-span-2 text-right">Sekėjai</div><div className="col-span-2 text-right">Vid. Žiūrovai</div><div className="col-span-2 text-right">Augimas</div><div className="col-span-2 text-right">Taškai</div>
+                <div className="col-span-1">Vieta</div><div className="col-span-3">Kūrėjas</div><div className="col-span-2 text-right">{boardTab === "rising" ? "Buvo (vid.)" : "Sekėjai"}</div><div className="col-span-2 text-right">Vid. Žiūrovai</div><div className="col-span-2 text-right">Augimas (7 d.)</div><div className="col-span-2 text-right">{boardTab === "rising" ? "Valandos (7 d.)" : "Taškai"}</div>
               </div>
               <div className="divide-y divide-slate-800/80">
                 {!board.data ? <div className="p-8 text-center text-xs text-slate-500">{board.err ? "Nepavyko gauti reitingo" : "Kraunama..."}</div>
-                  : board.data.items.length === 0 ? <div className="p-8 text-center text-xs text-slate-500">Reitingas dar neskaičiuotas</div>
-                  : board.data.items.map((t) => {
+                  : board.data.items.length === 0 ? <div className="p-8 text-center text-xs text-slate-500">{boardTab === "rising" ? "Kylančių sąrašas atsiras, kai susikaups bent 8 dienų istorija." : "Reitingas dar neskaičiuotas"}</div>
+                  : board.data.items.map((t, idx) => {
                     const p = t.channel.platform;
                     const row = "sm:text-right flex sm:block justify-between text-xs";
-                    const rk = ["bg-amber-500/20 text-amber-400 border border-amber-500/40", "bg-slate-300/20 text-slate-200 border border-slate-300/40", "bg-amber-700/20 text-amber-500 border border-amber-700/40"][t.rank - 1] ?? "text-slate-500";
+                    const pos = ((board.data?.page ?? 1) - 1) * (board.data?.pageSize ?? 10) + idx + 1;
+                    const rk = ["bg-amber-500/20 text-amber-400 border border-amber-500/40", "bg-slate-300/20 text-slate-200 border border-slate-300/40", "bg-amber-700/20 text-amber-500 border border-amber-700/40"][pos - 1] ?? "text-slate-500";
                     return (
                       <div key={t.id} className="grid grid-cols-1 sm:grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-slate-800/40 transition-colors">
-                        <div className="col-span-1"><span className={`w-6 h-6 rounded-md inline-flex items-center justify-center text-xs font-bold ${rk}`}>{t.rank}</span></div>
+                        <div className="col-span-1 flex sm:block items-center"><span className={`w-6 h-6 rounded-md inline-flex items-center justify-center text-xs font-bold ${rk}`}>{pos}</span>{boardTab === "all" && <Move rank={t.rank} prev={t.prevRank} isNew={t.isNew} />}</div>
                         <div className="col-span-3 flex items-center gap-3">
                           <Avatar name={t.channel.displayName} src={t.channel.avatarUrl} className="w-10 h-10 rounded-lg text-sm" />
                           <div><div className="flex items-center gap-2"><span className="font-semibold text-white text-sm">{t.channel.displayName}</span><span className={PLAT[p].text}><Brand p={p} className="w-3.5 h-3.5" /></span></div><span className="text-xs text-slate-500">{PLAT[p].label}</span></div>
                         </div>
-                        <div className={`col-span-2 ${row} text-slate-300`}><span className="sm:hidden text-slate-500">Sekėjai:</span><b className="font-semibold">{t.channel.followers ? fmt(t.channel.followers) : "–"}</b></div>
+                        <div className={`col-span-2 ${row} text-slate-300`}>{boardTab === "rising" ? (<><span className="sm:hidden text-slate-500">Buvo (vid.):</span><b className="font-semibold">{t.prevAvgViewers ? fmt(t.prevAvgViewers) : "–"}</b></>) : (<><span className="sm:hidden text-slate-500">Sekėjai:</span><b className="font-semibold">{t.channel.followers ? fmt(t.channel.followers) : "–"}</b></>)}</div>
                         <div className={`col-span-2 ${row} text-slate-300`}><span className="sm:hidden text-slate-500">Vid. žiūrovai:</span><b className="font-semibold">{t.avgViewers ? fmt(t.avgViewers) : "–"}</b></div>
-                        <div className={`col-span-2 ${row} font-semibold ${t.growthPct >= 0 ? "text-emerald-400" : "text-red-400"}`}><span className="sm:hidden text-slate-500">Augimas:</span><span>{t.growthPct >= 0 ? "+" : ""}{t.growthPct.toFixed(1)}%</span></div>
-                        <div className={`col-span-2 ${row} text-indigo-300 font-semibold`}><span className="sm:hidden text-slate-500">Taškai:</span><span>{t.score.toFixed(1)}</span></div>
+                        <div className={`col-span-2 ${row} font-semibold ${t.growthPct === null ? "text-slate-500" : t.growthPct >= 0 ? "text-emerald-400" : "text-red-400"}`}><span className="sm:hidden text-slate-500">Augimas:</span><span>{t.growthPct === null ? "–" : `${t.growthPct >= 0 ? "+" : ""}${t.growthPct.toFixed(1)}%`}</span></div>
+                        <div className={`col-span-2 ${row} text-indigo-300 font-semibold`}>
+                          <span className="sm:hidden text-slate-500">{boardTab === "rising" ? "Valandos:" : "Taškai:"}</span>
+                          {boardTab === "rising" ? (
+                            <span>{t.hours.toFixed(1)}</span>
+                          ) : (
+                            <span className="block" title={`Auditorija ${t.partAudience.toFixed(1)} · Nuoseklumas ${t.partConsistency.toFixed(1)}`}>
+                              <span className="block">{t.score.toFixed(1)}</span>
+                              <span className="hidden sm:flex mt-1 h-1 w-16 ml-auto rounded-full overflow-hidden bg-slate-800">
+                                <span className="bg-indigo-400" style={{ width: `${(t.partAudience / Math.max(t.score, 0.1)) * 100}%` }} />
+                                <span className="bg-emerald-400" style={{ width: `${(t.partConsistency / Math.max(t.score, 0.1)) * 100}%` }} />
+                              </span>
+                            </span>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -548,4 +579,13 @@ function Pager({ page, total, count, size, onChange }: { page: number; total: nu
       </div>
     </div>
   );
+}
+
+function Move({ rank, prev, isNew }: { rank: number; prev: number | null; isNew: boolean }) {
+  const base = "ml-2 sm:ml-0 sm:mt-1 sm:block text-[10px]";
+  if (isNew) return <span className={`${base} font-bold text-indigo-300`}>NAUJAS</span>;
+  if (prev === null) return null;
+  const d = prev - rank;
+  if (d === 0) return <span className={`${base} text-slate-600`}>–</span>;
+  return <span className={`${base} font-semibold ${d > 0 ? "text-emerald-400" : "text-red-400"}`}>{d > 0 ? "▲" : "▼"}{Math.abs(d)}</span>;
 }
