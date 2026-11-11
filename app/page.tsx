@@ -191,7 +191,7 @@ export default function Page() {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-[0_0_22px_rgba(124,58,237,.55)] group-hover:scale-105 transition-transform">
                 <Radio className="w-4 h-4 text-white" />
               </div>
-              <span className="text-lg font-bold tracking-tight text-white">Streameriai<span className="text-indigo-400">.Lt</span></span>
+              <span className="text-base sm:text-lg font-bold tracking-tight text-white">Streameriai<span className="text-indigo-400">.Lt</span></span>
             </a>
             <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] font-medium text-slate-400">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />Lietuvos Hub’as
@@ -212,7 +212,7 @@ export default function Page() {
               <div className="flex items-center gap-2.5">
                 <Avatar name={me.data.user.displayName} src={me.data.user.avatarUrl} className="w-8 h-8 rounded-full text-xs" />
                 <span className="hidden sm:block text-xs font-semibold text-slate-200 max-w-[8rem] truncate">{me.data.user.displayName}</span>
-                {me.data.user.isAdmin && <a href="/admin" className="text-xs font-semibold text-indigo-300 hover:text-indigo-200 border border-indigo-500/40 rounded-md px-2 py-1">Admin</a>}
+                {me.data.user.isAdmin && <a href="/admin" className="max-sm:hidden text-xs font-semibold text-indigo-300 hover:text-indigo-200 border border-indigo-500/40 rounded-md px-2 py-1">Admin</a>}
                 <button onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); window.location.reload(); }} className="text-xs text-slate-400 hover:text-white transition-colors">Atsijungti</button>
               </div>
             ) : (
@@ -222,12 +222,15 @@ export default function Page() {
             )}
           </div>
         </div>
-        <nav className="lg:hidden flex gap-1 overflow-x-auto px-4 pb-2">
+        <nav className="lg:hidden flex gap-1 overflow-x-auto px-4 pb-2 [scrollbar-width:none]">
           {NAV.map(([href, label, Icon, c]) => (
             <a key={href} href={href} className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-900 flex items-center gap-2 whitespace-nowrap">
               <Icon className={`w-3.5 h-3.5 ${c}`} />{label}
             </a>
           ))}
+        
+          <button onClick={() => setModal("connect")} className="px-3 py-1.5 rounded-lg text-xs font-medium text-indigo-300 hover:bg-slate-900 flex items-center gap-2 whitespace-nowrap"><Sparkles className="w-3.5 h-3.5" />Prijungti kanalą</button>
+          {me.data?.user?.isAdmin && <a href="/admin" className="px-3 py-1.5 rounded-lg text-xs font-medium text-indigo-300 hover:bg-slate-900 whitespace-nowrap">Admin</a>}
         </nav>
       </header>
 
@@ -295,16 +298,16 @@ export default function Page() {
               <p className="text-xs text-slate-400 mt-1">Transliacijos vykstančios šiuo metu iš įvairių platformų</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <div className="relative flex-1 sm:flex-none">
+              <div className="relative w-full sm:w-auto">
                 <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ieškoti pagal vardą ar žaidimą..." className="pl-9 pr-4 py-2 bg-slate-900/90 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors w-full sm:w-60" />
               </div>
               <select value={cat} onChange={(e) => setCat(e.target.value)} className="bg-slate-900 border border-slate-800 text-xs text-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 cursor-pointer">
                 <option value="visi">Visos Kategorijos</option><option value="gaming">Žaidimai</option><option value="esports">Esports</option><option value="irl">Pokalbiai / IRL</option><option value="tech">Technologijos</option>
               </select>
-              <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
+              <div className="flex max-w-full overflow-x-auto bg-slate-900 p-1 rounded-lg border border-slate-800 [scrollbar-width:none]">
                 {(["all", "TWITCH", "KICK", "YOUTUBE"] as const).map((k) => (
-                  <button key={k} onClick={() => setPlat(k)} className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${plat === k ? (k === "all" ? "bg-indigo-600 text-white" : PLAT[k].active) : "text-slate-400 hover:text-white"}`}>
+                  <button key={k} onClick={() => setPlat(k)} className={`shrink-0 px-3 py-2 sm:py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${plat === k ? (k === "all" ? "bg-indigo-600 text-white" : PLAT[k].active) : "text-slate-400 hover:text-white"}`}>
                     {k !== "all" && <Brand p={k} className="w-3.5 h-3.5" />}{k === "all" ? "Visi" : PLAT[k].label}
                   </button>
                 ))}
@@ -368,9 +371,9 @@ export default function Page() {
               <div className="text-xs text-slate-500 font-medium">Duomenys sinchronizuojami per oficialias API sąsajas</div>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <div className="flex flex-wrap bg-slate-900 p-1 rounded-lg border border-slate-800">
+              <div className="flex max-w-full overflow-x-auto bg-slate-900 p-1 rounded-lg border border-slate-800 [scrollbar-width:none]">
                 {([["all", "Visi"], ["TWITCH", "Twitch"], ["KICK", "Kick"], ["YOUTUBE", "YouTube"], ["rising", "Kylančios"]] as const).map(([k, l]) => (
-                  <button key={k} onClick={() => { setBoardTab(k); setBoardPage(1); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${boardTab === k ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}>
+                  <button key={k} onClick={() => { setBoardTab(k); setBoardPage(1); }} className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-2 sm:py-1.5 rounded-md text-xs font-semibold transition-all ${boardTab === k ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}>
                     {k === "TWITCH" || k === "KICK" || k === "YOUTUBE" ? (
                       <span className={PLAT[k].text}><Brand p={k} className="w-3.5 h-3.5" /></span>
                     ) : k === "rising" ? (
@@ -396,27 +399,27 @@ export default function Page() {
                   : board.data.items.length === 0 ? <div className="p-8 text-center text-xs text-slate-500">{boardTab === "rising" ? "Kylančių sąrašas atsiras, kai susikaups bent 8 dienų istorija." : "Reitingas dar neskaičiuotas"}</div>
                   : board.data.items.map((t, idx) => {
                     const p = t.channel.platform;
-                    const row = "sm:text-right flex sm:block justify-between text-xs";
+                    const row = "flex flex-col items-center text-center text-xs sm:block sm:text-right";
                     const pos = ((board.data?.page ?? 1) - 1) * (board.data?.pageSize ?? 10) + idx + 1;
                     const rk = ["bg-amber-500/20 text-amber-400 border border-amber-500/40", "bg-slate-300/20 text-slate-200 border border-slate-300/40", "bg-amber-700/20 text-amber-500 border border-amber-700/40"][pos - 1] ?? "text-slate-500";
                     return (
-                      <div key={t.id} className="grid grid-cols-1 sm:grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-slate-800/40 transition-colors">
-                        <div className="col-span-1 flex sm:block items-center"><span className={`w-6 h-6 rounded-md inline-flex items-center justify-center text-xs font-bold ${rk}`}>{pos}</span>{boardTab === "all" && <Move rank={t.rank} prev={t.prevRank} isNew={t.isNew} />}</div>
-                        <div className="col-span-3 flex items-center gap-3">
+                      <div key={t.id} className="grid grid-cols-6 sm:grid-cols-12 gap-x-2 gap-y-3 sm:gap-4 px-4 sm:px-6 py-4 items-center hover:bg-slate-800/40 transition-colors">
+                        <div className="col-span-1"><span className={`w-6 h-6 rounded-md inline-flex items-center justify-center text-xs font-bold ${rk}`}>{pos}</span>{boardTab === "all" && <Move rank={t.rank} prev={t.prevRank} isNew={t.isNew} />}</div>
+                        <div className="col-span-5 sm:col-span-3 flex items-center gap-3 min-w-0">
                           <Avatar name={t.channel.displayName} src={t.channel.avatarUrl} className="w-10 h-10 rounded-lg text-sm" />
                           <div><div className="flex items-center gap-2"><span className="font-semibold text-white text-sm">{t.channel.displayName}</span><span className={PLAT[p].text}><Brand p={p} className="w-3.5 h-3.5" /></span></div><span className="text-xs text-slate-500">{PLAT[p].label}</span></div>
                         </div>
-                        <div className={`col-span-2 ${row} text-slate-300`}>{boardTab === "rising" ? (<><span className="sm:hidden text-slate-500">Buvo (vid.):</span><b className="font-semibold">{t.prevAvgViewers ? fmt(t.prevAvgViewers) : "–"}</b></>) : (<><span className="sm:hidden text-slate-500">Sekėjai:</span><b className="font-semibold">{t.channel.followers ? fmt(t.channel.followers) : "–"}</b></>)}</div>
-                        <div className={`col-span-2 ${row} text-slate-300`}><span className="sm:hidden text-slate-500">Vid. žiūrovai:</span><b className="font-semibold">{t.avgViewers ? fmt(t.avgViewers) : "–"}</b></div>
-                        <div className={`col-span-2 ${row} font-semibold ${t.growthPct === null ? "text-slate-500" : t.growthPct >= 0 ? "text-emerald-400" : "text-red-400"}`}><span className="sm:hidden text-slate-500">Augimas:</span><span>{t.growthPct === null ? "–" : `${t.growthPct >= 0 ? "+" : ""}${t.growthPct.toFixed(1)}%`}</span></div>
+                        <div className={`max-sm:hidden col-span-2 ${row} text-slate-300`}>{boardTab === "rising" ? (<><span className="sm:hidden text-[10px] uppercase tracking-wide text-slate-500 mb-0.5">Buvo (vid.)</span><b className="font-semibold">{t.prevAvgViewers ? fmt(t.prevAvgViewers) : "–"}</b></>) : (<><span className="sm:hidden text-[10px] uppercase tracking-wide text-slate-500 mb-0.5">Sekėjai:</span><b className="font-semibold">{t.channel.followers ? fmt(t.channel.followers) : "–"}</b></>)}</div>
+                        <div className={`col-span-2 ${row} text-slate-300`}><span className="sm:hidden text-[10px] uppercase tracking-wide text-slate-500 mb-0.5">Vid. žiūrovai</span><b className="font-semibold">{t.avgViewers ? fmt(t.avgViewers) : "–"}</b></div>
+                        <div className={`col-span-2 ${row} font-semibold ${t.growthPct === null ? "text-slate-500" : t.growthPct >= 0 ? "text-emerald-400" : "text-red-400"}`}><span className="sm:hidden text-[10px] uppercase tracking-wide text-slate-500 mb-0.5">Augimas</span><span>{t.growthPct === null ? "–" : `${t.growthPct >= 0 ? "+" : ""}${t.growthPct.toFixed(1)}%`}</span></div>
                         <div className={`col-span-2 ${row} text-indigo-300 font-semibold`}>
-                          <span className="sm:hidden text-slate-500">{boardTab === "rising" ? "Valandos:" : "Taškai:"}</span>
+                          <span className="sm:hidden text-[10px] uppercase tracking-wide text-slate-500 mb-0.5">{boardTab === "rising" ? "Valandos" : "Taškai"}</span>
                           {boardTab === "rising" ? (
                             <span>{t.hours.toFixed(1)}</span>
                           ) : (
                             <span className="block" title={`Auditorija ${t.partAudience.toFixed(1)} · Nuoseklumas ${t.partConsistency.toFixed(1)}`}>
                               <span className="block">{t.score.toFixed(1)}</span>
-                              <span className="hidden sm:flex mt-1 h-1 w-16 ml-auto rounded-full overflow-hidden bg-slate-800">
+                              <span className="flex mt-1 h-1 w-16 sm:ml-auto rounded-full overflow-hidden bg-slate-800">
                                 <span className="bg-indigo-400" style={{ width: `${(t.partAudience / Math.max(t.score, 0.1)) * 100}%` }} />
                                 <span className="bg-emerald-400" style={{ width: `${(t.partConsistency / Math.max(t.score, 0.1)) * 100}%` }} />
                               </span>
@@ -485,7 +488,7 @@ export default function Page() {
       {/* MODALS */}
       {modal && (
         <div onClick={() => setModal(null)} className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div onClick={(e) => e.stopPropagation()} className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-6 relative shadow-2xl">
+          <div onClick={(e) => e.stopPropagation()} className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative shadow-2xl">
             <button onClick={() => setModal(null)} aria-label="Uždaryti" className="absolute top-3 right-3 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
             {modal === "login" && (
               <>
@@ -567,7 +570,7 @@ function Pager({ page, total, count, size, onChange }: { page: number; total: nu
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
       <p className="text-xs text-slate-500">Rodoma {from}–{to} iš {count}</p>
       <div className="flex items-center gap-1">
-        <button disabled={page <= 1} onClick={() => onChange(page - 1)} className={nav}>‹ Atgal</button>
+        <button disabled={page <= 1} onClick={() => onChange(page - 1)} className={nav}>‹<span className="hidden sm:inline"> Atgal</span></button>
         {nums.map((n, i) =>
           n === "…" ? (
             <span key={`e${i}`} className="px-2 text-xs text-slate-600">…</span>
@@ -582,14 +585,14 @@ function Pager({ page, total, count, size, onChange }: { page: number; total: nu
             </button>
           )
         )}
-        <button disabled={page >= total} onClick={() => onChange(page + 1)} className={nav}>Toliau ›</button>
+        <button disabled={page >= total} onClick={() => onChange(page + 1)} className={nav}><span className="hidden sm:inline">Toliau </span>›</button>
       </div>
     </div>
   );
 }
 
 function Move({ rank, prev, isNew }: { rank: number; prev: number | null; isNew: boolean }) {
-  const base = "ml-2 sm:ml-0 sm:mt-1 sm:block text-[10px]";
+  const base = "mt-1 block text-[10px]";
   if (isNew) return <span className={`${base} font-bold text-indigo-300`}>NAUJAS</span>;
   if (prev === null) return null;
   const d = prev - rank;

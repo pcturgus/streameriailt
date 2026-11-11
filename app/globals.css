@@ -18,3 +18,13 @@ body { background: #0B0F17; color: #f1f5f9; }
 @media (prefers-reduced-motion: reduce) {
   .rise-icon, .rise-icon path { animation: none; }
 }
+
+/* MOBILE: pritaikymas telefonams */
+body { overflow-x: clip; }
+@media (max-width: 1023px) {
+  html { scroll-padding-top: 7rem; } /* antraštė + mobili juosta */
+}
+@media (max-width: 640px) {
+  /* 16 px neleidžia iPhone priartinti puslapio paspaudus ant laukelio */
+  input, select, textarea { font-size: 16px !important; }
+}
