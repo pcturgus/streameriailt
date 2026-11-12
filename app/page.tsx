@@ -55,7 +55,7 @@ function Avatar({ name, src, className = "w-9 h-9 rounded-full text-xs" }: { nam
   if (src && !bad) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt="" referrerPolicy="no-referrer" onError={() => setBad(true)} className={`${className} shrink-0 object-cover border border-slate-700`} />
+      <img src={src} alt="" referrerPolicy="no-referrer" loading="lazy" decoding="async" onError={() => setBad(true)} className={`${className} shrink-0 object-cover border border-slate-700`} />
     );
   }
   return (
@@ -71,7 +71,7 @@ function Thumb({ src, seed, className = "" }: { src: string | null; seed: string
     <div className={`overflow-hidden ${className}`} style={grad(seed)}>
       {src && !bad && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" referrerPolicy="no-referrer" onError={() => setBad(true)} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+        <img src={src} alt="" referrerPolicy="no-referrer" onError={() => setBad(true)} className="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async" />
       )}
     </div>
   );
@@ -83,18 +83,25 @@ function useApi<T>(url: string, every = 60_000) {
   useEffect(() => {
     let alive = true;
     const load = async () => {
+      if (document.hidden) return; // nekraunome, kai skirtukas nematomas
       try {
         const r = await fetch(url);
         if (!r.ok) throw new Error(String(r.status));
         const j = (await r.json()) as T;
-        if (alive) { setData(j); setErr(false); }
+        if (alive) {
+          // atnaujiname tik jei duomenys pasikeitė, kad puslapis be reikalo nepersipieštų
+          setData((prev) => (prev !== null && JSON.stringify(prev) === JSON.stringify(j) ? prev : j));
+          setErr(false);
+        }
       } catch {
         if (alive) setErr(true);
       }
     };
     load();
     const t = setInterval(load, every);
-    return () => { alive = false; clearInterval(t); };
+    const onVis = () => { if (!document.hidden) load(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { alive = false; clearInterval(t); document.removeEventListener("visibilitychange", onVis); };
   }, [url, every]);
   return { data, err };
 }
@@ -146,6 +153,11 @@ export default function Page() {
     p, n: streams.filter((s) => s.channel.platform === p).length,
   }));
 
+  useEffect(() => {
+    document.body.style.overflow = modal !== null || clip !== null ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [modal, clip]);
+
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -178,13 +190,11 @@ export default function Page() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0B0F17] text-slate-100">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-b from-indigo-900/20 via-purple-900/10 to-transparent blur-[120px]" />
-      </div>
+    <div className="relative min-h-screen bg-[#0B0F17] text-slate-100">
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[520px] pointer-events-none z-0 bg-[radial-gradient(ellipse_70%_100%_at_50%_0%,rgba(79,70,229,0.16),transparent)]" />
 
       {/* HEADER */}
-      <header className="sticky top-0 z-40 bg-[#0B0F17]/80 backdrop-blur-xl border-b border-slate-800/60">
+      <header className="sticky top-0 z-40 bg-[#0B0F17]/95 sm:bg-[#0B0F17]/80 sm:backdrop-blur-xl border-b border-slate-800/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-6">
             <a href="#" className="flex items-center gap-2.5 group">
@@ -265,14 +275,14 @@ export default function Page() {
               ].map(([c, Icon, v, l]) => {
                 const I = Icon as typeof Radio;
                 return (
-                  <div key={l as string} className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-sm">
+                  <div key={l as string} className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 sm:backdrop-blur-sm">
                     <div className={`w-9 h-9 rounded-xl bg-${c}-500/10 border border-${c}-500/20 flex items-center justify-center text-${c}-400 mb-3`}><I className="w-4 h-4" /></div>
                     <div className="text-2xl font-bold text-white">{v as string}</div>
                     <div className="text-xs text-slate-400 mt-1 font-medium">{l as string}</div>
                   </div>
                 );
               })}
-              <div className="col-span-2 p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-sm">
+              <div className="col-span-2 p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 sm:backdrop-blur-sm">
                 <div className="text-xs text-slate-400 mb-3 font-medium flex items-center gap-2"><TrendingUp className="w-3.5 h-3.5 text-violet-400" />Gyvai pagal platformas</div>
                 <div className="grid grid-cols-3 gap-3">
                   {counts.map(({ p, n }) => (
@@ -487,7 +497,7 @@ export default function Page() {
 
       {/* MODALS */}
       {modal && (
-        <div onClick={() => setModal(null)} className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div onClick={() => setModal(null)} className="fixed inset-0 z-50 bg-slate-950/85 sm:bg-slate-950/80 sm:backdrop-blur-sm flex items-center justify-center p-4">
           <div onClick={(e) => e.stopPropagation()} className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative shadow-2xl">
             <button onClick={() => setModal(null)} aria-label="Uždaryti" className="absolute top-3 right-3 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
             {modal === "login" && (
@@ -523,7 +533,7 @@ export default function Page() {
       )}
 
       {clip && (
-        <div onClick={() => setClip(null)} className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div onClick={() => setClip(null)} className="fixed inset-0 z-50 bg-slate-950/95 sm:bg-slate-950/90 sm:backdrop-blur-md flex items-center justify-center p-4">
           <div onClick={(e) => e.stopPropagation()} className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-2xl overflow-hidden relative shadow-2xl">
             <button onClick={() => setClip(null)} aria-label="Uždaryti" className="absolute top-3 right-3 z-10 text-slate-300 hover:text-white"><X className="w-4 h-4" /></button>
             <div className="relative aspect-video bg-black">

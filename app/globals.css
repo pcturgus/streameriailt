@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root { color-scheme: dark; }
-html { scroll-behavior: smooth; scroll-padding-top: 5rem; background: #0B0F17; }
+html { scroll-padding-top: 5rem; background: #0B0F17; }
 body { background: #0B0F17; color: #f1f5f9; }
 
 /* Animuota „kylančių“ ikona: linija pati save nubrėžia ir švelniai juda aukštyn */
@@ -13,8 +13,8 @@ body { background: #0B0F17; color: #f1f5f9; }
   0%, 100% { transform: translateY(1px); }
   50% { transform: translateY(-1px); }
 }
-.rise-icon { display: inline-flex; animation: rise-float 2.4s ease-in-out infinite; }
-.rise-icon path { stroke-dasharray: 32; animation: rise-draw 2.4s ease-in-out infinite; }
+.rise-icon { display: inline-flex; }
+.rise-icon path { stroke-dasharray: 32; animation: rise-draw 2.4s ease-in-out 3; } /* 3 kartus ir sustoja (nenaudoja procesoriaus visą laiką) */
 @media (prefers-reduced-motion: reduce) {
   .rise-icon, .rise-icon path { animation: none; }
 }
@@ -27,4 +27,11 @@ body { overflow-x: clip; }
 @media (max-width: 640px) {
   /* 16 px neleidžia iPhone priartinti puslapio paspaudus ant laukelio */
   input, select, textarea { font-size: 16px !important; }
+}
+
+/* PERF: lengvesnis slinkimas telefonuose */
+html { -webkit-text-size-adjust: 100%; }
+* { -webkit-tap-highlight-color: transparent; }
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  html { scroll-behavior: smooth; } /* tik kompiuteriuose; telefonuose trukdo greitam slinkimui */
 }
