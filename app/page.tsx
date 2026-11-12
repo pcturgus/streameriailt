@@ -198,14 +198,10 @@ export default function Page() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-6">
             <a href="#" className="flex items-center gap-2.5 group">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-[0_0_22px_rgba(124,58,237,.55)] group-hover:scale-105 transition-transform">
-                <Radio className="w-4 h-4 text-white" />
-              </div>
+              <img src="/logo.png" alt="Streameriai.Lt" width={40} height={40} className="w-10 h-10 object-contain drop-shadow-[0_0_10px_rgba(124,58,237,0.6)] group-hover:scale-105 transition-transform" />
               <span className="text-base sm:text-lg font-bold tracking-tight text-white">Streameriai<span className="text-indigo-400">.Lt</span></span>
             </a>
-            <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] font-medium text-slate-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />Lietuvos Hub’as
-            </div>
+            
           </div>
           <nav className="hidden lg:flex items-center gap-1">
             {NAV.map(([href, label, Icon, c]) => (
