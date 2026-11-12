@@ -3,21 +3,21 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Radio, Trophy, Film, Search, Play, ThumbsUp, Eye, X, ExternalLink,
-  Activity, Sparkles, UserCheck, ArrowUpRight, TrendingUp, BadgeCheck,
+  Activity, Sparkles, UserCheck, ArrowUpRight, TrendingUp, BadgeCheck, Heart, Info,
 } from "lucide-react";
 
 type Platform = "TWITCH" | "KICK" | "YOUTUBE";
 type Channel = {
-  displayName: string; avatarUrl: string | null; url: string; platform: Platform;
+  id: string; login: string; platformId: string; displayName: string; avatarUrl: string | null; url: string; platform: Platform;
   verified: boolean; followers: number; stats?: { avgViewers: number }[];
 };
 type Stream = {
   id: string; title: string; game: string; category: string; viewers: number;
-  thumbnailUrl: string | null; tags: string[]; channel: Channel;
+  thumbnailUrl: string | null; startedAt: string | null; tags: string[]; channel: Channel;
 };
 type Rank = {
   id: string; rank: number; score: number; growthPct: number | null; avgViewers: number; hours: number;
-  partAudience: number; partConsistency: number; prevRank: number | null; isNew: boolean; prevAvgViewers: number | null; channel: Channel;
+  partAudience: number; partConsistency: number; prevRank: number | null; isNew: boolean; prevAvgViewers: number | null; spark: number[]; channel: Channel;
 };
 type Clip = {
   id: string; title: string; views: number; likes: number; durationSec: number;
@@ -117,34 +117,68 @@ export default function Page() {
   const me = useApi<{ user: { id: string; displayName: string; avatarUrl: string | null; isAdmin?: boolean } | null }>("/api/auth/me", 300_000);
 
   const [plat, setPlat] = useState<"all" | Platform>("all");
+  const [sort, setSort] = useState<"viewers" | "new">("viewers");
+  const [onlyFav, setOnlyFav] = useState(false);
+  const [favIds, setFavIds] = useState<string[]>([]);
+  const [player, setPlayer] = useState<Stream | null>(null);
   const [cat, setCat] = useState("visi");
   const [q, setQ] = useState("");
-  const [modal, setModal] = useState<null | "login" | "connect" | "done">(null);
+  const [modal, setModal] = useState<null | "login" | "connect" | "done" | "info">(null);
   const [clip, setClip] = useState<Clip | null>(null);
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [formErr, setFormErr] = useState("");
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setModal(null); setClip(null); } };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setModal(null); setClip(null); setPlayer(null); } };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   const streams = live.data?.streams ?? [];
   const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    return streams.filter(
+    const t = q.trim().toLowerCase();
+    const list = streams.filter(
       (x) =>
         (plat === "all" || x.channel.platform === plat) &&
         (cat === "visi" || x.category === cat) &&
-        (!s || `${x.channel.displayName} ${x.title} ${x.game}`.toLowerCase().includes(s))
+        (!onlyFav || favIds.includes(x.channel.id)) &&
+        (!t || `${x.channel.displayName} ${x.title} ${x.game}`.toLowerCase().includes(t))
     );
-  }, [streams, plat, cat, q]);
+    return sort === "new"
+      ? [...list].sort((a, b) => (Date.parse(b.startedAt ?? "") || 0) - (Date.parse(a.startedAt ?? "") || 0))
+      : list;
+  }, [streams, plat, cat, q, onlyFav, favIds, sort]);
 
   const counts = (["TWITCH", "KICK", "YOUTUBE"] as Platform[]).map((p) => ({
     p, n: streams.filter((s) => s.channel.platform === p).length,
   }));
+
+  useEffect(() => {
+    if (!me.data?.user) { setFavIds([]); return; }
+    fetch("/api/favorites")
+      .then((r) => r.json())
+      .then((j: { ids?: string[] }) => setFavIds(j.ids ?? []))
+      .catch(() => {});
+  }, [me.data?.user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function toggleFav(channelId: string) {
+    if (!me.data?.user) { setModal("login"); return; }
+    const was = favIds.includes(channelId);
+    setFavIds((ids) => (was ? ids.filter((i) => i !== channelId) : [...ids, channelId]));
+    const r = await fetch("/api/favorites", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channelId }),
+    }).catch(() => null);
+    if (!r || !r.ok) setFavIds((ids) => (was ? [...ids, channelId] : ids.filter((i) => i !== channelId)));
+  }
+
+  const topLive = [...streams].sort((a, b) => b.viewers - a.viewers).slice(0, 3);
+  const bItems = board.data?.items ?? [];
+  const showPodium = boardTab !== "rising" && !!board.data && board.data.page === 1 && bItems.length >= 3;
+  const podium = showPodium ? bItems.slice(0, 3) : [];
+  const tableRows = showPodium ? bItems.slice(3) : bItems;
+  const tableOffset = board.data ? (board.data.page - 1) * board.data.pageSize + (showPodium ? 3 : 0) : 0;
+  const hideTable = showPodium && tableRows.length === 0;
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -189,7 +223,7 @@ export default function Page() {
           <div className="flex items-center gap-6">
             <a href="#" className="flex items-center gap-2.5 group">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-[0_0_22px_rgba(124,58,237,.55)] group-hover:scale-105 transition-transform">
-                <Radio className="w-4 h-4 text-white" />
+                <LogoMark />
               </div>
               <span className="text-base sm:text-lg font-bold tracking-tight text-white">Streameriai<span className="text-indigo-400">.Lt</span></span>
             </a>
@@ -247,21 +281,43 @@ export default function Page() {
                 <span className="bg-gradient-to-r from-indigo-400 via-violet-300 to-slate-100 bg-clip-text text-transparent">Tiesiogines Transliacijas</span>
               </h1>
               <p className="text-sm sm:text-base text-slate-400 leading-relaxed max-w-xl">
-                Vieninga platforma, sujungianti <strong className="text-slate-200">Twitch</strong>, <strong className="text-slate-200">Kick</strong> ir <strong className="text-slate-200">YouTube</strong> turinio kūrėjus Lietuvoje. Realaus laiko analitika, reitingai ir bendruomenė.
+                Visi lietuviški streameriai vienoje vietoje: <strong className="text-slate-200">Twitch</strong>, <strong className="text-slate-200">Kick</strong> ir <strong className="text-slate-200">YouTube</strong>. Gyvos transliacijos, reitingai ir klipai.
               </p>
               <div className="flex flex-wrap gap-3 pt-2">
                 <a href="#transliacijos" className="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-2 shadow-md transition-all">
                   <Activity className="w-4 h-4" />Žiūrėti Tiesiogiai
                 </a>
-                <button onClick={() => setModal("connect")} className="px-5 py-2.5 rounded-lg bg-slate-900 border border-slate-700/80 hover:bg-slate-800 text-slate-200 font-semibold text-xs flex items-center gap-2 transition-all">
+                <button onClick={() => setModal("connect")} className="px-3 py-2.5 text-slate-300 hover:text-white font-semibold text-xs flex items-center gap-2 transition-colors underline-offset-4 hover:underline">
                   Registruoti Kanalą<ArrowUpRight className="w-4 h-4 text-slate-400" />
                 </button>
               </div>
             </div>
             <div className="lg:col-span-5 grid grid-cols-2 gap-4">
+              <div className="col-span-2 p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-white"><span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />Dabar žiūrimiausia</div>
+                  <a href="#transliacijos" className="text-[11px] text-indigo-300 hover:text-indigo-200">Visos →</a>
+                </div>
+                {topLive.length === 0 ? (
+                  <p className="text-xs text-slate-500 py-4 text-center">Šiuo metu gyvų transliacijų nėra.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {topLive.map((s) => (
+                      <button key={s.id} onClick={() => (embedUrl(s, "") ? setPlayer(s) : window.open(s.channel.url, "_blank", "noopener"))} className="w-full flex items-center gap-3 p-1.5 rounded-xl hover:bg-slate-800/60 text-left transition-colors">
+                        <Thumb src={s.thumbnailUrl} seed={s.channel.displayName + s.game} className="relative w-24 aspect-video rounded-lg shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-semibold text-white truncate">{s.channel.displayName}</div>
+                          <div className="text-[11px] text-slate-400 truncate">{s.game}</div>
+                        </div>
+                        <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-200 shrink-0"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />{fmt(s.viewers)}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               {[
-                ["indigo", Radio, live.data ? fmt(live.data.totals.live) : "–", "Aktyvūs Streameriai"],
-                ["emerald", Eye, live.data ? fmt(live.data.totals.viewers) : "–", "Tiesioginiai Žiūrovai"],
+                ["indigo", Radio, live.data ? <CountUp value={live.data.totals.live} /> : "–", "Aktyvūs Streameriai"],
+                ["emerald", Eye, live.data ? <CountUp value={live.data.totals.viewers} /> : "–", "Tiesioginiai Žiūrovai"],
               ].map(([c, Icon, v, l]) => {
                 const I = Icon as typeof Radio;
                 return (
@@ -305,6 +361,12 @@ export default function Page() {
               <select value={cat} onChange={(e) => setCat(e.target.value)} className="bg-slate-900 border border-slate-800 text-xs text-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 cursor-pointer">
                 <option value="visi">Visos Kategorijos</option><option value="gaming">Žaidimai</option><option value="esports">Esports</option><option value="irl">Pokalbiai / IRL</option><option value="tech">Technologijos</option>
               </select>
+              <select value={sort} onChange={(e) => setSort(e.target.value as "viewers" | "new")} aria-label="Rikiavimas" className="bg-slate-900 border border-slate-800 text-xs text-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 cursor-pointer">
+                <option value="viewers">Žiūrimiausi</option><option value="new">Naujausiai pradėję</option>
+              </select>
+              <button onClick={() => (me.data?.user ? setOnlyFav((v) => !v) : setModal("login"))} aria-pressed={onlyFav} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold transition-colors ${onlyFav ? "bg-rose-500/15 border-rose-500/40 text-rose-300" : "bg-slate-900 border-slate-800 text-slate-300 hover:text-white"}`}>
+                <Heart className={`w-3.5 h-3.5 ${onlyFav ? "fill-rose-400 text-rose-400" : ""}`} />Mėgstami
+              </button>
               <div className="flex max-w-full overflow-x-auto bg-slate-900 p-1 rounded-lg border border-slate-800 [scrollbar-width:none]">
                 {(["all", "TWITCH", "KICK", "YOUTUBE"] as const).map((k) => (
                   <button key={k} onClick={() => setPlat(k)} className={`shrink-0 px-3 py-2 sm:py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${plat === k ? (k === "all" ? "bg-indigo-600 text-white" : PLAT[k].active) : "text-slate-400 hover:text-white"}`}>
@@ -329,11 +391,15 @@ export default function Page() {
                 const p = s.channel.platform;
                 return (
                   <div key={s.id} className="group bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/40 flex flex-col">
-                    <a href={s.channel.url} target="_blank" rel="noopener noreferrer" className="relative block aspect-video">
+                    <a href={s.channel.url} target="_blank" rel="noopener noreferrer" onClick={(e) => { if (embedUrl(s, "")) { e.preventDefault(); setPlayer(s); } }} className="relative block aspect-video">
                       <Thumb src={s.thumbnailUrl} seed={s.channel.displayName + s.game} className="absolute inset-0" />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
                       <span className={`absolute top-3 left-3 bg-slate-950/80 border border-slate-700/60 ${PLAT[p].text} text-[11px] font-medium px-2 py-1 rounded-md flex items-center gap-1.5`}><Brand p={p} className="w-3 h-3" />{PLAT[p].label}</span>
                       <span className="absolute top-3 right-3 bg-slate-950/90 border border-slate-800 text-slate-200 text-[11px] font-medium px-2.5 py-1 rounded-md flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />{fmt(s.viewers)}</span>
+                      <span className="absolute bottom-3 left-3 flex items-center gap-1.5 text-[10px] font-medium">
+                        {s.startedAt && Date.now() - Date.parse(s.startedAt) < 20 * 60_000 && <span className="bg-emerald-500 text-slate-950 font-bold rounded px-1.5 py-0.5">NAUJAS</span>}
+                        {s.startedAt && <span className="bg-slate-950/80 border border-slate-800 text-slate-300 rounded px-1.5 py-0.5">{since(s.startedAt)}</span>}
+                      </span>
                       <span className="absolute inset-0 bg-indigo-950/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><span className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"><Play className="w-5 h-5 ml-0.5" fill="currentColor" /></span></span>
                     </a>
                     <div className="p-4 flex-1 flex flex-col justify-between">
@@ -341,7 +407,7 @@ export default function Page() {
                         <div className="flex items-center gap-3 mb-2.5">
                           <Avatar name={s.channel.displayName} src={s.channel.avatarUrl} />
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5"><h4 className="font-semibold text-white text-sm truncate">{s.channel.displayName}</h4>{s.channel.verified && <BadgeCheck className="w-3.5 h-3.5 text-indigo-400" />}</div>
+                            <div className="flex items-center gap-1.5"><h4 className="font-semibold text-white text-sm truncate"><a href={`/k/${s.channel.id}`} className="hover:text-indigo-300 transition-colors">{s.channel.displayName}</a></h4>{s.channel.verified && <BadgeCheck className="w-3.5 h-3.5 text-indigo-400" />}</div>
                             <p className="text-xs text-slate-400 truncate">{s.game}</p>
                           </div>
                         </div>
@@ -349,7 +415,12 @@ export default function Page() {
                       </div>
                       <div className="flex items-center justify-between pt-3 border-t border-slate-800/80">
                         <div className="flex flex-wrap gap-1.5">{s.tags.map((t) => <span key={t} className="text-[10px] font-medium text-slate-400 bg-slate-800/60 px-2 py-0.5 rounded">#{t}</span>)}</div>
-                        <a href={s.channel.url} target="_blank" rel="noopener noreferrer" aria-label="Atidaryti transliaciją" className="text-slate-500 hover:text-indigo-400 transition-colors"><ExternalLink className="w-3.5 h-3.5" /></a>
+                        <div className="flex items-center gap-2.5">
+                          <button onClick={() => toggleFav(s.channel.id)} aria-label="Mėgstamas kanalas" aria-pressed={favIds.includes(s.channel.id)} className={`transition-colors ${favIds.includes(s.channel.id) ? "text-rose-400" : "text-slate-500 hover:text-rose-300"}`}>
+                            <Heart className={`w-3.5 h-3.5 ${favIds.includes(s.channel.id) ? "fill-rose-400" : ""}`} />
+                          </button>
+                          <a href={s.channel.url} target="_blank" rel="noopener noreferrer" aria-label="Atidaryti transliaciją" className="text-slate-500 hover:text-indigo-400 transition-colors"><ExternalLink className="w-3.5 h-3.5" /></a>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -368,8 +439,11 @@ export default function Page() {
                 <h2 className="text-2xl font-bold text-white tracking-tight">TOP Streameriai Lietuvoje</h2>
                 <p className="text-xs text-slate-400 mt-1">{boardTab === "rising" ? "Kanalai, kurių vidutinis žiūrovų skaičius per pastarąsias 7 dienas labiausiai išaugo, palyginti su ankstesnėmis 7 dienomis." : "Pastarųjų 30 dienų reitingas pagal vidutinį žiūrovų skaičių ir transliacijų nuoseklumą. Atnaujinamas kas valandą."}</p>
               </div>
-              <div className="text-xs text-slate-500 font-medium">Duomenys sinchronizuojami per oficialias API sąsajas</div>
+              <button onClick={() => setModal("info")} className="self-start md:self-auto inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white border border-slate-800 hover:border-slate-700 rounded-lg px-3 py-1.5 transition-colors">
+                <Info className="w-3.5 h-3.5" />Kaip skaičiuojama?
+              </button>
             </div>
+
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div className="flex max-w-full overflow-x-auto bg-slate-900 p-1 rounded-lg border border-slate-800 [scrollbar-width:none]">
                 {([["all", "Visi"], ["TWITCH", "Twitch"], ["KICK", "Kick"], ["YOUTUBE", "YouTube"], ["rising", "Kylančios"]] as const).map(([k, l]) => (
@@ -390,48 +464,99 @@ export default function Page() {
                 </div>
               )}
             </div>
-            <div className="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
-              <div className="hidden sm:grid grid-cols-12 gap-4 px-6 py-3.5 border-b border-slate-800 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                <div className="col-span-1">Vieta</div><div className="col-span-3">Kūrėjas</div><div className="col-span-2 text-right">{boardTab === "rising" ? "Buvo (vid.)" : "Sekėjai"}</div><div className="col-span-2 text-right">Vid. Žiūrovai</div><div className="col-span-2 text-right">Augimas (7 d.)</div><div className="col-span-2 text-right">{boardTab === "rising" ? "Valandos (7 d.)" : "Taškai"}</div>
-              </div>
-              <div className="divide-y divide-slate-800/80">
-                {!board.data ? <div className="p-8 text-center text-xs text-slate-500">{board.err ? "Nepavyko gauti reitingo" : "Kraunama..."}</div>
-                  : board.data.items.length === 0 ? <div className="p-8 text-center text-xs text-slate-500">{boardTab === "rising" ? "Kylančių sąrašas atsiras, kai susikaups bent 8 dienų istorija." : "Reitingas dar neskaičiuotas"}</div>
-                  : board.data.items.map((t, idx) => {
-                    const p = t.channel.platform;
-                    const row = "flex flex-col items-center text-center text-xs sm:block sm:text-right";
-                    const pos = ((board.data?.page ?? 1) - 1) * (board.data?.pageSize ?? 10) + idx + 1;
-                    const rk = ["bg-amber-500/20 text-amber-400 border border-amber-500/40", "bg-slate-300/20 text-slate-200 border border-slate-300/40", "bg-amber-700/20 text-amber-500 border border-amber-700/40"][pos - 1] ?? "text-slate-500";
-                    return (
-                      <div key={t.id} className="grid grid-cols-6 sm:grid-cols-12 gap-x-2 gap-y-3 sm:gap-4 px-4 sm:px-6 py-4 items-center hover:bg-slate-800/40 transition-colors">
-                        <div className="col-span-1"><span className={`w-6 h-6 rounded-md inline-flex items-center justify-center text-xs font-bold ${rk}`}>{pos}</span>{boardTab === "all" && <Move rank={t.rank} prev={t.prevRank} isNew={t.isNew} />}</div>
-                        <div className="col-span-5 sm:col-span-3 flex items-center gap-3 min-w-0">
-                          <Avatar name={t.channel.displayName} src={t.channel.avatarUrl} className="w-10 h-10 rounded-lg text-sm" />
-                          <div><div className="flex items-center gap-2"><span className="font-semibold text-white text-sm">{t.channel.displayName}</span><span className={PLAT[p].text}><Brand p={p} className="w-3.5 h-3.5" /></span></div><span className="text-xs text-slate-500">{PLAT[p].label}</span></div>
-                        </div>
-                        <div className={`max-sm:hidden col-span-2 ${row} text-slate-300`}>{boardTab === "rising" ? (<><span className="sm:hidden text-[10px] uppercase tracking-wide text-slate-500 mb-0.5">Buvo (vid.)</span><b className="font-semibold">{t.prevAvgViewers ? fmt(t.prevAvgViewers) : "–"}</b></>) : (<><span className="sm:hidden text-[10px] uppercase tracking-wide text-slate-500 mb-0.5">Sekėjai:</span><b className="font-semibold">{t.channel.followers ? fmt(t.channel.followers) : "–"}</b></>)}</div>
-                        <div className={`col-span-2 ${row} text-slate-300`}><span className="sm:hidden text-[10px] uppercase tracking-wide text-slate-500 mb-0.5">Vid. žiūrovai</span><b className="font-semibold">{t.avgViewers ? fmt(t.avgViewers) : "–"}</b></div>
-                        <div className={`col-span-2 ${row} font-semibold ${t.growthPct === null ? "text-slate-500" : t.growthPct >= 0 ? "text-emerald-400" : "text-red-400"}`}><span className="sm:hidden text-[10px] uppercase tracking-wide text-slate-500 mb-0.5">Augimas</span><span>{t.growthPct === null ? "–" : `${t.growthPct >= 0 ? "+" : ""}${t.growthPct.toFixed(1)}%`}</span></div>
-                        <div className={`col-span-2 ${row} text-indigo-300 font-semibold`}>
-                          <span className="sm:hidden text-[10px] uppercase tracking-wide text-slate-500 mb-0.5">{boardTab === "rising" ? "Valandos" : "Taškai"}</span>
-                          {boardTab === "rising" ? (
-                            <span>{t.hours.toFixed(1)}</span>
-                          ) : (
-                            <span className="block" title={`Auditorija ${t.partAudience.toFixed(1)} · Nuoseklumas ${t.partConsistency.toFixed(1)}`}>
-                              <span className="block">{t.score.toFixed(1)}</span>
-                              <span className="flex mt-1 h-1 w-16 sm:ml-auto rounded-full overflow-hidden bg-slate-800">
-                                <span className="bg-indigo-400" style={{ width: `${(t.partAudience / Math.max(t.score, 0.1)) * 100}%` }} />
-                                <span className="bg-emerald-400" style={{ width: `${(t.partConsistency / Math.max(t.score, 0.1)) * 100}%` }} />
-                              </span>
-                            </span>
-                          )}
-                        </div>
+
+            {showPodium && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 sm:items-end">
+                {podium.map((t, i) => {
+                  const p = t.channel.platform;
+                  const order = i === 0 ? "order-1 sm:order-2" : i === 1 ? "order-2 sm:order-1" : "order-3";
+                  const tone = ["from-amber-500/15 border-amber-500/40", "from-slate-300/10 border-slate-400/40", "from-amber-700/15 border-amber-700/40"][i];
+                  const medal = ["bg-amber-500/20 text-amber-300 border-amber-500/50", "bg-slate-300/20 text-slate-100 border-slate-300/50", "bg-amber-700/20 text-amber-400 border-amber-700/50"][i];
+                  return (
+                    <a key={t.id} href={`/k/${t.channel.id}`} className={`${order} group relative rounded-2xl border bg-gradient-to-b ${tone} to-slate-900/60 p-5 text-center transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-black/40 ${i === 0 ? "sm:pt-8 sm:pb-8" : ""}`}>
+                      <span className={`absolute top-3 left-3 w-7 h-7 rounded-lg border inline-flex items-center justify-center text-sm font-bold ${medal}`}>{i + 1}</span>
+                      {boardTab === "all" && <span className="absolute top-3 right-3"><Move rank={t.rank} prev={t.prevRank} isNew={t.isNew} /></span>}
+                      <div className="flex justify-center"><Avatar name={t.channel.displayName} src={t.channel.avatarUrl} className={`${i === 0 ? "w-20 h-20" : "w-16 h-16"} rounded-2xl text-xl`} /></div>
+                      <div className="mt-3 flex items-center justify-center gap-1.5 min-w-0">
+                        <span className="font-bold text-white truncate group-hover:text-indigo-300 transition-colors">{t.channel.displayName}</span>
+                        <span className={PLAT[p].text}><Brand p={p} className="w-3.5 h-3.5" /></span>
                       </div>
-                    );
-                  })}
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        <div><div className="text-base font-bold text-white">{t.avgViewers ? fmt(t.avgViewers) : "–"}</div><div className="text-[10px] uppercase tracking-wide text-slate-500">Vid. žiūrovai</div></div>
+                        <div><div className={`text-base font-bold ${growthCls(t.growthPct)}`}>{growthTxt(t.growthPct)}</div><div className="text-[10px] uppercase tracking-wide text-slate-500">Augimas</div></div>
+                        <div><div className="text-base font-bold text-indigo-300">{t.score.toFixed(1)}</div><div className="text-[10px] uppercase tracking-wide text-slate-500">Taškai</div></div>
+                      </div>
+                      <div className="mt-3 flex justify-center"><Spark data={t.spark} className="w-24 h-7" /></div>
+                    </a>
+                  );
+                })}
               </div>
-            </div>
-          
+            )}
+
+            {!hideTable && (
+              <div className="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+                <div className="hidden sm:grid grid-cols-12 gap-4 px-6 py-3.5 border-b border-slate-800 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  <div className="col-span-1">Vieta</div><div className="col-span-3">Kūrėjas & Platforma</div><div className="col-span-2 text-right">Dinamika (7 d.)</div><div className="col-span-2 text-right">Vid. žiūrovai</div><div className="col-span-2 text-right">Augimas (7 d.)</div><div className="col-span-2 text-right">{boardTab === "rising" ? "Valandos (7 d.)" : "Taškai"}</div>
+                </div>
+                <div className="divide-y divide-slate-800/80">
+                  {!board.data ? (
+                    board.err ? (
+                      <div className="p-8 text-center text-xs text-slate-500">Nepavyko gauti reitingo</div>
+                    ) : (
+                      [0, 1, 2, 3, 4].map((i) => <div key={i} className="h-[72px] animate-pulse bg-slate-800/30" />)
+                    )
+                  ) : board.data.items.length === 0 ? (
+                    <div className="p-8 text-center text-xs text-slate-500">{boardTab === "rising" ? "Kylančių sąrašas atsiras, kai susikaups bent 8 dienų istorija." : "Reitingas dar neskaičiuotas"}</div>
+                  ) : (
+                    tableRows.map((t, idx) => {
+                      const p = t.channel.platform;
+                      const pos = tableOffset + idx + 1;
+                      const row = "flex flex-col items-center text-center text-xs sm:block sm:text-right";
+                      const label = "sm:hidden text-[10px] uppercase tracking-wide text-slate-500 mb-0.5";
+                      const rk = ["bg-amber-500/20 text-amber-400 border border-amber-500/40", "bg-slate-300/20 text-slate-200 border border-slate-300/40", "bg-amber-700/20 text-amber-500 border border-amber-700/40"][pos - 1] ?? "text-slate-500";
+                      return (
+                        <div key={t.id} className={`grid grid-cols-6 sm:grid-cols-12 gap-x-2 gap-y-3 sm:gap-4 px-4 sm:px-6 py-4 items-center border-l-2 ${PSTRIPE[p]} hover:bg-slate-800/40 transition-colors`}>
+                          <div className="col-span-1">
+                            <span className={`w-6 h-6 rounded-md inline-flex items-center justify-center text-xs font-bold ${rk}`}>{pos}</span>
+                            {boardTab === "all" && <Move rank={t.rank} prev={t.prevRank} isNew={t.isNew} />}
+                          </div>
+                          <div className="col-span-5 sm:col-span-3 flex items-center gap-3 min-w-0">
+                            <Avatar name={t.channel.displayName} src={t.channel.avatarUrl} className="w-10 h-10 rounded-lg text-sm" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <a href={`/k/${t.channel.id}`} className="font-semibold text-white text-sm truncate hover:text-indigo-300 transition-colors">{t.channel.displayName}</a>
+                                <span className={PLAT[p].text}><Brand p={p} className="w-3.5 h-3.5" /></span>
+                              </div>
+                              <span className="text-xs text-slate-500">{PLAT[p].label}</span>
+                            </div>
+                            <span className="sm:hidden"><Spark data={t.spark} className="w-16 h-6" /></span>
+                          </div>
+                          <div className="max-sm:hidden col-span-2 flex justify-end"><Spark data={t.spark} className="w-24 h-7" /></div>
+                          <div className={`col-span-2 ${row} text-slate-300`} title={boardTab === "rising" && t.prevAvgViewers ? `Buvo ${fmt(t.prevAvgViewers)}` : undefined}>
+                            <span className={label}>Vid. žiūrovai</span><b className="font-semibold">{t.avgViewers ? fmt(t.avgViewers) : "–"}</b>
+                          </div>
+                          <div className={`col-span-2 ${row} font-semibold ${growthCls(t.growthPct)}`}><span className={label}>Augimas</span><span>{growthTxt(t.growthPct)}</span></div>
+                          <div className={`col-span-2 ${row} text-indigo-300 font-semibold`}>
+                            <span className={label}>{boardTab === "rising" ? "Valandos" : "Taškai"}</span>
+                            {boardTab === "rising" ? (
+                              <span>{t.hours.toFixed(1)}</span>
+                            ) : (
+                              <span className="block" title={`Auditorija ${t.partAudience.toFixed(1)} · Nuoseklumas ${t.partConsistency.toFixed(1)}`}>
+                                <span className="block">{t.score.toFixed(1)}</span>
+                                <span className="flex mt-1 h-1 w-16 sm:ml-auto rounded-full overflow-hidden bg-slate-800">
+                                  <span className="bg-indigo-400" style={{ width: `${(t.partAudience / Math.max(t.score, 0.1)) * 100}%` }} />
+                                  <span className="bg-emerald-400" style={{ width: `${(t.partConsistency / Math.max(t.score, 0.1)) * 100}%` }} />
+                                </span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
             {board.data && board.data.totalPages > 1 && (
               <Pager
                 page={board.data.page}
@@ -447,7 +572,8 @@ export default function Page() {
           </div>
         </section>
 
-        {/* CLIPS */}
+        
+{/* CLIPS */}
         <section id="klipai" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2"><Film className="w-5 h-5 text-indigo-400" />Populiariausi Savaitės Klipai</h2>
@@ -463,6 +589,7 @@ export default function Page() {
                       <Thumb src={c.thumbnailUrl} seed={c.channel.displayName + "clip"} className="absolute inset-0" />
                       <div className="absolute inset-0 flex items-center justify-center"><span className="w-10 h-10 rounded-full bg-indigo-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"><Play className="w-5 h-5 ml-0.5" fill="currentColor" /></span></div>
                       <span className="absolute bottom-2.5 right-2.5 bg-slate-950/90 text-slate-200 text-[10px] font-semibold px-2 py-0.5 rounded border border-slate-800">{dur(c.durationSec)}</span>
+                      <span className={`absolute top-2.5 left-2.5 bg-slate-950/80 border border-slate-800 rounded-md px-1.5 py-1 ${PLAT[c.channel.platform].text}`}><Brand p={c.channel.platform} className="w-3 h-3" /></span>
                     </div>
                     <div className="p-4">
                       <h3 className="font-semibold text-white text-xs line-clamp-1 group-hover:text-indigo-400 transition-colors">{c.title}</h3>
@@ -515,9 +642,43 @@ export default function Page() {
                 </form>
               </>
             )}
+            {modal === "info" && (
+              <>
+                <h3 className="text-base font-bold text-white mb-1">Kaip skaičiuojamas reitingas</h3>
+                <p className="text-xs text-slate-400 mb-4">Reitingas perskaičiuojamas kas valandą iš pastarųjų 30 dienų duomenų.</p>
+                <ul className="space-y-3 text-xs text-slate-300 leading-relaxed">
+                  <li><strong className="text-indigo-300">Auditorija (70 %)</strong> – vidutinis žiūrovų skaičius transliacijų metu. Kuo ilgiau transliuota, tuo didesnė šios dienos įtaka.</li>
+                  <li><strong className="text-emerald-300">Nuoseklumas (30 %)</strong> – kiek dienų ir valandų kanalas transliavo (daugiausia 12 val. per dieną).</li>
+                  <li><strong className="text-white">Augimas</strong> – pastarųjų 7 dienų žiūrovų vidurkis, palyginti su ankstesnėmis 7 dienomis.</li>
+                  <li><strong className="text-white">Kylančios</strong> – kanalai, kurių žiūrovų vidurkis išaugo labiausiai (neįtraukiami kanalai, kurių vidurkis mažesnis nei 5).</li>
+                  <li>Į reitingą patenka kanalai, turintys bent 2 aktyvias dienas ir 2 transliacijos valandas. Lygybės atveju aukščiau tas, kas daugiau transliavo.</li>
+                </ul>
+              </>
+            )}
             {modal === "done" && (
               <div className="text-center py-4"><div className="mx-auto w-11 h-11 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mb-4"><BadgeCheck className="w-5 h-5" /></div><h3 className="text-base font-bold text-white">Kanalas pridėtas</h3><p className="text-xs text-slate-400 mt-1">Jis atsiras kataloge, kai pradėsite transliuoti. Jei 5 dienas nestreaminsite, kanalas bus pašalintas ir teks jį pridėti iš naujo.</p></div>
             )}
+          </div>
+        </div>
+      )}
+
+      {player && (
+        <div onClick={() => setPlayer(null)} className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+            <div className="relative aspect-video bg-black">
+              <iframe src={embedUrl(player, window.location.hostname) ?? ""} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={player.channel.displayName} className="absolute inset-0 w-full h-full" />
+            </div>
+            <div className="p-4 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-white text-sm truncate">{player.title}</h3>
+                <p className="text-xs text-slate-400 mt-0.5 truncate">{player.channel.displayName} · {PLAT[player.channel.platform].label} · {fmt(player.viewers)} žiūrovų</p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <a href={`/k/${player.channel.id}`} className="text-xs text-indigo-300 hover:text-indigo-200">Kanalas</a>
+                <a href={player.channel.url} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-3 py-1.5">Atidaryti {PLAT[player.channel.platform].label}</a>
+                <button onClick={() => setPlayer(null)} aria-label="Uždaryti" className="text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -598,4 +759,66 @@ function Move({ rank, prev, isNew }: { rank: number; prev: number | null; isNew:
   const d = prev - rank;
   if (d === 0) return <span className={`${base} text-slate-600`}>–</span>;
   return <span className={`${base} font-semibold ${d > 0 ? "text-emerald-400" : "text-red-400"}`}>{d > 0 ? "▲" : "▼"}{Math.abs(d)}</span>;
+}
+
+const PSTRIPE: Record<Platform, string> = {
+  TWITCH: "border-l-[#9146FF]/70",
+  KICK: "border-l-[#53FC18]/70",
+  YOUTUBE: "border-l-[#FF0000]/70",
+};
+const growthTxt = (g: number | null) => (g === null ? "–" : `${g >= 0 ? "+" : ""}${g.toFixed(1)}%`);
+const growthCls = (g: number | null) => (g === null ? "text-slate-500" : g >= 0 ? "text-emerald-400" : "text-red-400");
+
+function since(iso: string): string {
+  const m = Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 60_000));
+  if (m < 60) return `prieš ${m} min.`;
+  const h = Math.floor(m / 60);
+  return h < 24 ? `prieš ${h} val.` : `prieš ${Math.floor(h / 24)} d.`;
+}
+
+// Įterptas grotuvas (Kick kol kas neįterpiamas – atidaroma nuoroda)
+function embedUrl(s: Stream, host: string): string | null {
+  if (s.channel.platform === "TWITCH") return `https://player.twitch.tv/?channel=${encodeURIComponent(s.channel.login)}&parent=${host}&autoplay=true`;
+  if (s.channel.platform === "YOUTUBE") return `https://www.youtube.com/embed/live_stream?channel=${encodeURIComponent(s.channel.platformId)}&autoplay=1`;
+  return null;
+}
+
+function LogoMark() {
+  return (
+    <svg viewBox="0 0 32 32" className="w-5 h-5" fill="none" aria-hidden="true">
+      <path d="M21 11.5c-.9-1.7-2.6-2.5-4.6-2.5-2.5 0-4.4 1.3-4.4 3.2 0 4.4 8.6 2.6 8.6 7 0 2-1.9 3.3-4.4 3.3-2.2 0-4-.9-5-2.6" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
+      <circle cx="25" cy="7" r="2.3" fill="#fbbf24" />
+    </svg>
+  );
+}
+
+function CountUp({ value }: { value: number }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const start = performance.now();
+    const from = n;
+    const tick = (t: number) => {
+      const k = Math.min(1, (t - start) / 800);
+      setN(Math.round(from + (value - from) * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+  return <>{fmt(n)}</>;
+}
+
+// Mažas 7 dienų žiūrovų grafikas
+function Spark({ data, className = "w-20 h-6" }: { data?: number[]; className?: string }) {
+  if (!data || data.filter((v) => v > 0).length < 2) return <span className="text-xs text-slate-600">–</span>;
+  const w = 80, h = 24;
+  const max = Math.max(...data), min = Math.min(...data), span = max - min || 1;
+  const pts = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - 2 - ((v - min) / span) * (h - 4)}`).join(" ");
+  const up = data[data.length - 1] >= data[0];
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className={className} fill="none" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points={pts} stroke={up ? "#34d399" : "#f87171"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
 }

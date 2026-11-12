@@ -28,3 +28,6 @@ body { overflow-x: clip; }
   /* 16 px neleidžia iPhone priartinti puslapio paspaudus ant laukelio */
   input, select, textarea { font-size: 16px !important; }
 }
+
+/* Prieinamumas: aiškus fokusas valdant klaviatūra */
+:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; border-radius: 4px; }
