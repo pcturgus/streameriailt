@@ -35,3 +35,16 @@ html { -webkit-text-size-adjust: 100%; }
 @media (prefers-reduced-motion: no-preference) and (hover: hover) {
   html { scroll-behavior: smooth; } /* tik kompiuteriuose; telefonuose trukdo greitam slinkimui */
 }
+
+/* Discord juosta: lėti, vos pastebimi efektai (tik transform/opacity – nekrauna procesoriaus) */
+@keyframes dc-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes dc-shine { 0% { transform: translateX(-120%) skewX(-20deg); } 60%, 100% { transform: translateX(380%) skewX(-20deg); } }
+@keyframes dc-ping { 0% { transform: scale(1); opacity: 0.5; } 70%, 100% { transform: scale(1.3); opacity: 0; } }
+@keyframes dc-glow { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.9; } }
+.dc-float { animation: dc-float 5s ease-in-out infinite; }
+.dc-shine { animation: dc-shine 8s ease-in-out infinite; }
+.dc-ping { animation: dc-ping 3s ease-out infinite; }
+.dc-glow { animation: dc-glow 5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .dc-float, .dc-shine, .dc-ping, .dc-glow { animation: none; }
+}

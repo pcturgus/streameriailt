@@ -211,9 +211,6 @@ export default function Page() {
             ))}
           </nav>
           <div className="flex items-center gap-3">
-            <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" aria-label="Mūsų Discord bendruomenė" className="flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-900 hover:bg-[#5865F2]/20 border border-slate-700/60 hover:border-[#5865F2]/60 w-9 h-9 lg:w-auto lg:h-auto justify-center lg:px-3.5 lg:py-2 rounded-lg transition-all">
-              <DiscordIcon className="w-4 h-4 text-[#5865F2]" /><span className="hidden lg:inline">Discord</span>
-            </a>
             <button onClick={() => setModal("connect")} className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-300 bg-slate-900 hover:bg-slate-800 border border-slate-700/60 px-3.5 py-2 rounded-lg transition-all">
               <Sparkles className="w-3.5 h-3.5 text-indigo-400" />Prijungti Kanalą
             </button>
@@ -485,18 +482,35 @@ export default function Page() {
               </div>
             )}
         </section>
-      <section className="px-4 sm:px-6 lg:px-8 pb-16">
-          <div className="max-w-7xl mx-auto relative overflow-hidden rounded-2xl border border-[#5865F2]/30 bg-gradient-to-br from-[#5865F2]/15 via-slate-900/60 to-slate-900/60 p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-5">
-            <div className="w-12 h-12 shrink-0 rounded-xl bg-[#5865F2] flex items-center justify-center shadow-lg shadow-[#5865F2]/30">
-              <DiscordIcon className="w-7 h-7 text-white" />
+      <section id="discord" className="px-4 sm:px-6 lg:px-8 pb-16">
+          <div className="max-w-7xl mx-auto relative overflow-hidden rounded-2xl border border-[#5865F2]/40 bg-gradient-to-br from-[#5865F2]/20 via-slate-900/70 to-slate-900/70 p-6 sm:p-8 lg:p-10">
+            {/* fono efektai: švelnus švytėjimas, lėtas šviesos praslinkimas, didelė blyški ikona */}
+            <div aria-hidden="true" className="dc-glow absolute -top-24 -left-20 w-80 h-80 pointer-events-none bg-[radial-gradient(circle_at_center,rgba(88,101,242,0.4),transparent_65%)]" />
+            <div aria-hidden="true" className="dc-shine absolute inset-y-0 left-0 w-1/4 pointer-events-none bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" />
+            <DiscordIcon className="absolute -right-8 -bottom-10 w-60 h-60 text-white/[0.04] rotate-12 pointer-events-none" />
+
+            <div className="relative grid grid-cols-1 md:grid-cols-[auto_1fr_auto] items-center gap-6 md:gap-8">
+              <div className="dc-float w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#5865F2] flex items-center justify-center shadow-xl shadow-[#5865F2]/40 ring-1 ring-white/20">
+                <DiscordIcon className="w-9 h-9 sm:w-11 sm:h-11 text-white" />
+              </div>
+
+              <div className="min-w-0">
+                <h3 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">Prisijunkite prie mūsų Discord bendruomenės</h3>
+                <p className="text-sm sm:text-base text-slate-300 mt-2 max-w-2xl">Naujienos, pagalba pridedant kanalą ir bendravimas su kitais Lietuvos kūrėjais bei žiūrovais.</p>
+                <ul className="mt-4 flex flex-wrap gap-2">
+                  {["Naujienos", "Pagalba kūrėjams", "Pasiūlymai", "Bendravimas"].map((t) => (
+                    <li key={t} className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] font-medium text-slate-300">{t}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="relative inline-flex md:justify-self-end">
+                <span aria-hidden="true" className="dc-ping absolute inset-0 rounded-xl bg-[#5865F2]" />
+                <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" className="relative inline-flex items-center justify-center gap-2 w-full md:w-auto px-7 py-3.5 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white text-sm sm:text-base font-bold shadow-lg shadow-[#5865F2]/30 transition-all hover:-translate-y-0.5">
+                  <DiscordIcon className="w-5 h-5" />Prisijungti prie Discord<ArrowUpRight className="w-4 h-4" />
+                </a>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-white">Prisijunkite prie mūsų Discord bendruomenės</h3>
-              <p className="text-sm text-slate-400 mt-1">Naujienos, pagalba pridedant kanalą, pasiūlymai ir bendravimas su kitais Lietuvos kūrėjais ir žiūrovais.</p>
-            </div>
-            <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" className="shrink-0 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-[#5865F2] hover:bg-[#4752C4] text-white text-sm font-semibold transition-colors">
-              <DiscordIcon className="w-4 h-4" />Prisijungti prie Discord
-            </a>
           </div>
         </section>
       </main>
@@ -504,7 +518,7 @@ export default function Page() {
       <footer className="relative z-10 bg-slate-950 border-t border-slate-800/80 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-500">
           <div className="flex items-center gap-2"><span className="font-bold text-slate-300 text-sm">Streameriai.Lt</span><span className="text-slate-600">|</span><span>© 2026 Visos teisės saugomos.</span></div>
-          <div className="flex flex-wrap justify-center gap-6"><a href="#" className="hover:text-slate-300">Apie Projektą</a><a href="#" className="hover:text-slate-300">API Dokumentacija</a><a href="/privatumas" className="hover:text-slate-300">Privatumo Taisyklės</a><a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" className="hover:text-slate-300">Discord</a><a href="#" className="hover:text-slate-300">Kontaktai</a></div>
+          <div className="flex flex-wrap justify-center gap-6"><a href="#" className="hover:text-slate-300">Apie Projektą</a><a href="#" className="hover:text-slate-300">API Dokumentacija</a><a href="/privatumas" className="hover:text-slate-300">Privatumo Taisyklės</a><a href="#" className="hover:text-slate-300">Kontaktai</a></div>
         </div>
       </footer>
 
