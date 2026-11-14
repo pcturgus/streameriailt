@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { Platform } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { resolveChannel } from "@/lib/resolve";
+import { notifyDiscord } from "@/lib/discord";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,13 @@ export async function POST(req: Request) {
       status: "APPROVED", activatedAt: new Date(),
     },
   });
+
+  {
+    const name = ch.displayName, link = ch.url, plat = ch.platform, isNew = !existing;
+    if (isNew || reactivate) {
+      after(() => notifyDiscord(`${isNew ? "🆕 Naujas kanalas" : "♻️ Kanalas aktyvuotas iš naujo"} (forma): **${name}** · ${plat}\n<${link}>`));
+    }
+  }
 
   await prisma.channelSubmission.create({
     data: { channelName: ch.displayName, platform: ch.platform, url, status: "APPROVED" },

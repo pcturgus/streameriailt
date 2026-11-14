@@ -103,6 +103,7 @@ async function run() {
     await sync();
   } catch (e) {
     console.error("Klipų sinchronizacijos klaida:", e);
+    process.exitCode = 1; // GitHub darbas pažymimas kaip nepavykęs
   }
 }
 

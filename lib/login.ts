@@ -1,6 +1,8 @@
 import { Platform } from "@prisma/client";
+import { after } from "next/server";
 import { prisma } from "@/lib/db";
 import { setSession } from "@/lib/session";
+import { notifyDiscord } from "@/lib/discord";
 
 type Opts = {
   provider: string; // twitch | kick | google
@@ -37,6 +39,11 @@ export async function finishLogin(o: Opts) {
         },
       });
 
+  if (!account) {
+    const nm = o.displayName, pv = o.provider;
+    after(() => notifyDiscord(`👤 Naujas vartotojas (${pv}): **${nm}**`));
+  }
+
   // Prisijungimas įrodo, kad žmogus valdo šį kanalą. Kanalas aktyvuojamas iš karto (be patvirtinimo).
   if (o.channel) {
     const c = o.channel;
@@ -59,6 +66,10 @@ export async function finishLogin(o: Opts) {
         ownerId: user.id, followers: c.followers ?? 0,
       },
     });
+    if (!existing) {
+      const nm = displayName, link = c.url, plat = c.platform;
+      after(() => notifyDiscord(`🆕 Naujas kanalas (prisijungimas): **${nm}** · ${plat}\n<${link}>`));
+    }
   }
 
   await setSession(user.id);

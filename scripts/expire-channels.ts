@@ -55,6 +55,7 @@ async function run() {
     await expire();
   } catch (e) {
     console.error("Galiojimo patikros klaida:", e);
+    process.exitCode = 1; // GitHub darbas pažymimas kaip nepavykęs
   }
 }
 

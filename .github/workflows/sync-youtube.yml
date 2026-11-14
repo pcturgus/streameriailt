@@ -29,3 +29,16 @@ jobs:
       - run: npm ci
       - name: YouTube
         run: npm run sync:youtube
+      - name: Pranešti į Discord apie klaidą
+        if: ${{ failure() }}
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW: ${{ github.workflow }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -z "$DISCORD_WEBHOOK_URL" ] && exit 0
+          PREV=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$WORKFLOW" --limit 2 --json conclusion --jq '.[1].conclusion' 2>/dev/null || true)
+          if [ "$PREV" = "failure" ]; then echo "Praeitas paleidimas irgi nepavyko, pranešimas nesiunčiamas"; exit 0; fi
+          MSG=$(printf '⚠️ Workeris nepavyko: %s\n%s' "$WORKFLOW" "$RUN_URL")
+          jq -n --arg c "$MSG" '{username:"Streameriai.Lt", content:$c, allowed_mentions:{parse:[]}}' | curl -sS -X POST -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK_URL"

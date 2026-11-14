@@ -165,6 +165,7 @@ async function run() {
     await compute();
   } catch (e) {
     console.error("Reitingo skaičiavimo klaida:", e);
+    process.exitCode = 1; // GitHub darbas pažymimas kaip nepavykęs
   }
 }
 
