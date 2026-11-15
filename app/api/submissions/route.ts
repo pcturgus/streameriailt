@@ -85,5 +85,5 @@ export async function POST(req: Request) {
     data: { channelName: ch.displayName, platform: ch.platform, url, status: "APPROVED" },
   });
 
-  return NextResponse.json({ channel: { displayName: ch.displayName, url: ch.url } }, { status: 201 });
+  return NextResponse.json({ channel: { displayName: ch.displayName, url: ch.url }, already: !reactivate }, { status: reactivate ? 201 : 200 });
 }

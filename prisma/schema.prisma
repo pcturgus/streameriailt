@@ -46,6 +46,7 @@ model Channel {
   status      ChannelStatus @default(PENDING)
   followers   Int           @default(0)
   activatedAt DateTime      @default(now())
+  adminNote   String?
   ownerId     String?
   owner       User?         @relation(fields: [ownerId], references: [id])
   createdAt   DateTime      @default(now())
@@ -166,4 +167,17 @@ model RankingHistory {
 
   @@unique([date, channelId])
   @@index([date])
+}
+
+
+// Administratoriaus veiksmų žurnalas
+model AdminLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  adminName String
+  action    String
+  target    String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

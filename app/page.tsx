@@ -5,6 +5,7 @@ import {
   Radio, Trophy, Film, Search, Play, ThumbsUp, Eye, X, ExternalLink,
   Activity, Sparkles, UserCheck, ArrowUpRight, TrendingUp, BadgeCheck,
 } from "lucide-react";
+import { EXPIRE_DAYS } from "@/lib/config";
 
 type Platform = "TWITCH" | "KICK" | "YOUTUBE";
 type Channel = {
@@ -130,6 +131,7 @@ export default function Page() {
   const [clip, setClip] = useState<Clip | null>(null);
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
+  const [already, setAlready] = useState(false);
   const [formErr, setFormErr] = useState("");
 
   useEffect(() => {
@@ -169,7 +171,7 @@ export default function Page() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ channelName: f.get("name"), platform: f.get("platform"), url: f.get("url") }),
       });
-      if (r.ok) setModal("done");
+      if (r.ok) { const j = (await r.json().catch(() => ({}))) as { already?: boolean }; setAlready(!!j.already); setModal("done"); }
       else setFormErr(((await r.json().catch(() => null)) as { error?: string } | null)?.error ?? "Nepavyko pateikti paraiškos");
     } catch {
       setFormErr("Nepavyko pasiekti serverio");
@@ -542,7 +544,7 @@ export default function Page() {
             )}
             {modal === "connect" && (
               <>
-                <div className="mb-6"><h3 className="text-base font-bold text-white">Prijungti Kanalą</h3><p className="text-xs text-slate-400 mt-1">Kanalas pridedamas iš karto. Jei 5 dienas nestreaminsite, jis bus pašalintas ir teks jį pridėti iš naujo.</p></div>
+                <div className="mb-6"><h3 className="text-base font-bold text-white">Prijungti Kanalą</h3><p className="text-xs text-slate-400 mt-1">Kanalas pridedamas iš karto. Jei {EXPIRE_DAYS} dienų nestreaminsite, jis bus pašalintas ir teks jį pridėti iš naujo.</p></div>
                 <form onSubmit={submit} className="space-y-4">
                   <div><label className="block text-xs font-medium text-slate-300 mb-1">Kanalo pavadinimas (nebūtina)</label><input name="name" placeholder="pvz. Gameris_LT" className={field} /></div>
                   <div><label className="block text-xs font-medium text-slate-300 mb-1">Pagrindinė platforma</label><select name="platform" className={field}><option value="TWITCH">Twitch.tv</option><option value="KICK">Kick.com</option><option value="YOUTUBE">YouTube</option></select></div>
@@ -553,7 +555,7 @@ export default function Page() {
               </>
             )}
             {modal === "done" && (
-              <div className="text-center py-4"><div className="mx-auto w-11 h-11 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mb-4"><BadgeCheck className="w-5 h-5" /></div><h3 className="text-base font-bold text-white">Kanalas pridėtas</h3><p className="text-xs text-slate-400 mt-1">Jis atsiras kataloge, kai pradėsite transliuoti. Jei 5 dienas nestreaminsite, kanalas bus pašalintas ir teks jį pridėti iš naujo.</p></div>
+              <div className="text-center py-4"><div className="mx-auto w-11 h-11 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mb-4"><BadgeCheck className="w-5 h-5" /></div><h3 className="text-base font-bold text-white">{already ? "Šis kanalas jau yra svetainėje" : "Kanalas pridėtas"}</h3><p className="text-xs text-slate-400 mt-1">{already ? "Jis rodomas kataloge, kai transliuoja. Kad gautumėte patvirtinimo varnelę, prisijunkite su savo paskyra (Prisijungti viršuje)." : <>Jis atsiras kataloge, kai pradėsite transliuoti. Jei {EXPIRE_DAYS} dienų nestreaminsite, kanalas bus pašalintas ir teks jį pridėti iš naujo.</>}</p></div>
             )}
           </div>
         </div>

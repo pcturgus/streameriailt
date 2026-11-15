@@ -1,4 +1,5 @@
 import { PrismaClient, Platform } from "@prisma/client";
+import { EXPIRE_DAYS } from "../lib/config";
 
 try {
   process.loadEnvFile();
@@ -7,7 +8,7 @@ try {
 }
 
 const prisma = new PrismaClient();
-const DAYS = 5; // po kiek dienų be transliacijų kanalas pašalinamas
+const DAYS = EXPIRE_DAYS; // po kiek dienų be transliacijų kanalas pašalinamas (lib/config.ts)
 
 async function expire() {
   const now = new Date();
