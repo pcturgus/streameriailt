@@ -27,7 +27,8 @@
     "expire:loop": "tsx scripts/expire-channels.ts --loop",
     "remove": "tsx scripts/remove-channel.ts",
     "postinstall": "prisma generate",
-    "make-admin": "tsx scripts/make-admin.ts"
+    "make-admin": "tsx scripts/make-admin.ts",
+    "discover:youtube": "tsx scripts/discover-youtube.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

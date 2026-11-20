@@ -29,6 +29,9 @@ jobs:
       - run: npm ci
       - name: YouTube
         run: npm run sync:youtube
+      - name: YouTube paieška (kas 2 val.)
+        if: ${{ !cancelled() }}
+        run: npm run discover:youtube
       - name: Pranešti į Discord apie klaidą
         if: ${{ failure() }}
         env:

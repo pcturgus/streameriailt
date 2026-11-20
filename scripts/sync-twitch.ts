@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { looksLithuanian } from "../lib/lt";
 
 try {
   process.loadEnvFile();
@@ -74,6 +75,25 @@ async function fetchLtStreams(): Promise<TwStream[]> {
   return all;
 }
 
+// Jei Twitch neturi lietuvių kalbos, tokie kanalai patenka į „other“. Peržiūrime populiariausius ir paliekame tik atrodančius lietuviškus.
+async function fetchOtherLt(): Promise<TwStream[]> {
+  const out: TwStream[] = [];
+  try {
+    let cursor = "";
+    for (let page = 0; page < 8; page++) {
+      const res = await helix<{ data: TwStream[]; pagination?: { cursor?: string } }>(
+        `/streams?language=other&first=100${cursor ? `&after=${cursor}` : ""}`
+      );
+      for (const s of res.data) if (looksLithuanian(s.title, s.tags ?? [])) out.push(s);
+      cursor = res.pagination?.cursor ?? "";
+      if (!cursor) break;
+    }
+  } catch (e) {
+    console.error("  ! Twitch paieška pagal tekstą nepavyko:", (e as Error).message.slice(0, 160));
+  }
+  return out;
+}
+
 async function fetchAvatars(ids: string[]): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   for (let i = 0; i < ids.length; i += 100) {
@@ -107,6 +127,12 @@ function hoursSince(prev: { isLive: boolean; updatedAt: Date } | null, nowMs: nu
 async function sync() {
   const started = Date.now();
   const streams = await fetchLtStreams();
+  const byLang = streams.length;
+  {
+    const seen = new Set(streams.map((s) => s.user_id));
+    for (const s of await fetchOtherLt()) if (!seen.has(s.user_id)) { seen.add(s.user_id); streams.push(s); }
+  }
+  const byText = streams.length - byLang;
 
   // Papildomai tikriname mūsų sąraše esančius kanalus (kad rastume ir tuos, kurių kalba nenustatyta kaip lietuvių)
   const watch = await prisma.channel.findMany({
@@ -180,7 +206,7 @@ async function sync() {
   });
 
   console.log(
-    `[${new Date().toLocaleTimeString("lt-LT")}] Twitch: gyvai ${streams.length}, baigė transliaciją ${off.count}, ${((Date.now() - started) / 1000).toFixed(1)} s`
+    `[${new Date().toLocaleTimeString("lt-LT")}] Twitch: gyvai ${streams.length} (pagal kalbą ${byLang}, pagal tekstą ${byText}), baigė transliaciją ${off.count}, ${((Date.now() - started) / 1000).toFixed(1)} s`
   );
 }
 
